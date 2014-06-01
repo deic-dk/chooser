@@ -1,7 +1,6 @@
 chooser
 =======
-ownCloud app implementing passwordless data access from trusted servers
--------
+#### ownCloud app implementing passwordless data access from trusted servers
 
 The purpose of this app is to allow servers trusted by an ownCloud user to access
 his or her files with no credentials. Trust can be placed on IP addresses and it is
