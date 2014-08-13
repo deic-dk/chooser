@@ -8,7 +8,7 @@ class OC_Chooser {
     const IPS_CACHE_KEY = 'compute_ips';
 
     public static function checkIP(){
-        OC_Log::write('chooser', 'Client IP '.$_SERVER['REMOTE_ADDR'], OC_Log::WARN);
+        OC_Log::write('chooser', 'Client IP '.$_SERVER['REMOTE_ADDR'], OC_Log::INFO);
         if(strpos($_SERVER['REMOTE_ADDR'], OC_Chooser::TRUSTED_NET) !== 0){
             return "";
         }

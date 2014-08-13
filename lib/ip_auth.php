@@ -7,7 +7,7 @@
  * later.
  */
 
-require_once('apps/chooser//lib/lib_chooser.php');
+require_once('apps/chooser/lib/lib_chooser.php');
 require_once('3rdparty/Sabre/DAV/Auth/IBackend.php');
 require_once('3rdparty/Sabre/DAV/Auth/Backend/AbstractBasic.php');
 
