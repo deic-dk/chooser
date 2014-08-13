@@ -33,6 +33,7 @@
 OC_Log::write('chooser','Remote access',OC_Log::WARN);
 
 require_once 'chooser/lib/ip_auth.php';
+require_once 'chooser/lib/server.php';
 
 OC_App::loadApps(array('filesystem','authentication'));
 
@@ -55,9 +56,11 @@ OC_App::loadApps($RUNTIME_APPTYPES);
 //OC_Util::setupFS($ownCloudUser);
 
 // Create ownCloud Dir
-$publicDir = new OC_Connector_Sabre_Directory('');
+$rootDir = new OC_Connector_Sabre_Directory('');
+$objectTree = new \OC\Connector\Sabre\ObjectTree($rootDir);
 
-$server = new Sabre_DAV_Server($publicDir);
+//$server = new Sabre_DAV_Server($rootDir);
+$server = new OC_Connector_Sabre_Server_chooser($objectTree);
 
 $requestBackend = new OC_Connector_Sabre_Request();
 $server->httpRequest = $requestBackend;
@@ -70,8 +73,13 @@ OC_Log::write('chooser','Base URI '.$baseuri,OC_Log::WARN);
 // Auth backend
 $authBackend = new OC_Connector_Sabre_Auth_ip_auth();
 
+$authBackend1 = new OC_Connector_Sabre_Auth();
+
 $authPlugin = new Sabre_DAV_Auth_Plugin($authBackend,'ownCloud');//should use $validTokens here
 $server->addPlugin($authPlugin);
+
+$defaults = new OC_Defaults();
+$server->addPlugin(new Sabre_DAV_Auth_Plugin($authBackend1, $defaults->getName()));
 
 // Also make sure there is a 'data' directory, writable by the server. This directory is used to store information about locks
 $lockBackend = new OC_Connector_Sabre_Locks();
