@@ -17,7 +17,7 @@ class OC_Chooser {
             $list_line = file_get_contents("https://".OC_Chooser::COMPUTE_IP."/steamengine/networks?f=1&action=tablelist");
             $list_array = explode("\n", $list_line);
             apc_add(OC_Chooser::IPS_CACHE_KEY, $list_array, OC_Chooser::IPS_TTL_SECONDS);
-            OC_Log::write('chooser', 'Refreshed IP cache: '.$list_array[3], OC_Log::WARN);
+            OC_Log::write('chooser', 'Refreshed IP cache: '.$list_array[3], OC_Log::INFO);
         }
         foreach($list_array as $line){
             $entries = explode("|", $line);
@@ -27,11 +27,12 @@ class OC_Chooser {
             $ip = trim($entries[5]);
             $owner = trim($entries[7]);
             if($ip != '' && $_SERVER['REMOTE_ADDR'] == $ip && $owner != ''){
-                OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::WARN);
+                OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
                 $user_id = $owner;
                 break;
             }
         }
+        OC_Log::write('chooser', 'user_id: '.$user_id, OC_Log::DEBUG);
         return $user_id;
     }
 

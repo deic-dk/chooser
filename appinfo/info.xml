@@ -2,6 +2,7 @@
 <info>
     <id>chooser</id>
     <name>File/directory chooser</name>
+		<version>1.0</version>
     <description>File/directory chooser for use by other sites.</description>
     <licence>AGPL</licence>
     <author>Frederik Orellana</author>
@@ -14,5 +15,9 @@
     <remote>
       <mydav>appinfo/remote.php</mydav>
     </remote>
-    <default_enable/>
+		<!-- seems not to work -->
+		<!-- <public>
+			<mydav>appinfo/remote.php</mydav>
+		</public> -->
+		<default_enable/>
 </info>
