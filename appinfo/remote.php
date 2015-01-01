@@ -41,6 +41,11 @@ OC_App::loadApps(array('filesystem','authentication'));
 
 OCP\App::checkAppEnabled('chooser');
 
+if(OCP\App::isEnabled('user_group_admin')){
+	OC::$CLASSPATH['OC_User_Group_Admin_Backend'] ='apps/user_group_admin/lib/backend.php';
+	OC_Group::useBackend( new OC_User_Group_Admin_Backend() );
+}
+
 ini_set('default_charset', 'UTF-8');
 //ini_set('error_reporting', '');
 @ob_clean();

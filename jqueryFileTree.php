@@ -19,6 +19,11 @@
 
 \OCP\JSON::checkLoggedIn();
 \OCP\JSON::checkAppEnabled('chooser');
+// Show folders shared via user_group_admin if available
+if(OCP\App::isEnabled('user_group_admin')){
+	OC::$CLASSPATH['OC_User_Group_Admin_Backend'] ='apps/user_group_admin/lib/backend.php';
+	OC_Group::useBackend( new OC_User_Group_Admin_Backend() );
+}
 
 $_POST['dir'] = urldecode($_POST['dir']);
 OC_Log::write('chooser','Listing: '.$_POST['dir'], OC_Log::WARN);

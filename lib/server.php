@@ -48,6 +48,8 @@ class OC_Connector_Sabre_Server_chooser extends Sabre_DAV_Server {
 		if(array_key_exists('REDIRECT_URL', $_SERVER) && (strpos($_SERVER['REDIRECT_URL'], "/remote.php/webdav/")===0 || $_SERVER['REDIRECT_URL']==="/remote.php/webdav")){
 			$this->setBaseUri("/remote.php/webdav/");
 		}
+		
+		//OC_Log::write('chooser','uri: '.$uri, OC_Log::WARN);
 
 		$newProperties = $this->getPropertiesForPath($uri,$requestedProperties,$depth);
 
@@ -79,7 +81,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre_DAV_Server {
 	 */
 	private function addPathNodesRecursively(&$nodes, $path) {
 		foreach($this->tree->getChildren($path) as $childNode) {
-                        if(self::excludePath($path) || self::excludePath($path . '/' . $childNode->getName())){
+                        if($this->excludePath($path) || $this->excludePath($path . '/' . $childNode->getName())){
                             continue;
                         }
 			$nodes[$path . '/' . $childNode->getName()] = $childNode;
@@ -98,19 +100,39 @@ class OC_Connector_Sabre_Server_chooser extends Sabre_DAV_Server {
 		}
 		return $contentType;
 	}
+	
+	private function resolveSharedPath($path){
+		//$absPath = $this->tree->getFileView()->getAbsolutePath($path);
+		//$realPath = \OC\Files\Filesystem::resolvePath('/' . $absPath);
+		//if(isset($realPath[0]) && get_class($realPath[0])=='OC\Files\Storage\Shared'){
+		//OC_Log::write('chooser','path: '.$path, OC_Log::WARN);
+		if(preg_match('/^\/*Shared\//',$path)){
+			$sharePath = preg_replace('/^\/*Shared\//', '', $path);
+			$sourcePath = \OC_Share_Backend_File::getSource($sharePath);
+			$path = preg_replace('/^\/*files\//', '/', $sourcePath['path']);
+			//OC_Log::write('chooser','path: '.$sharePath.':'.$path, OC_Log::WARN);
+		}
+		return $path;
+	}
 
 	/**
 	* Small helper to hide folders from sync clients.
 	*/
-	private static function excludePath($path){
+	private function excludePath($path){
+	
+		$sourcePath = $this->resolveSharedPath($path);
+
 		//if(stripos($_SERVER['HTTP_USER_AGENT'], "cadaver")===false && stripos($_SERVER['HTTP_USER_AGENT'], "curl")===false){
 		if(stripos($_SERVER['HTTP_USER_AGENT'], "mirall")===false && stripos($_SERVER['HTTP_USER_AGENT'], "csyncoC")===false){
 			return false;
 		}
-		$exclude_paths = array("/Data");
-		//OC_Log::write('chooser','path: '.$path.":".$_SERVER['HTTP_USER_AGENT'], OC_Log::WARN);
+
+		$exclude_paths = array('/^\/*Data\//');
 		foreach($exclude_paths as $ex_path){
-			if($path===$ex_path || substr($path, strlen($ex_path)+1)===$ex_path."/"){
+			//OC_Log::write('chooser','expath: '. $sourcePath.":".$ex_path, OC_Log::WARN);
+			//if($sourcePath===$ex_path || substr($sourcePath, 0, strlen($ex_path)+1)===$ex_path."/"){
+			if($sourcePath===$ex_path || preg_match($ex_path,$sourcePath)){
+				//OC_Log::write('chooser','Excluding path: '.OC_User::getUser().":".$path.":".$sourcePath, OC_Log::WARN);
 				return true;
 			}
 		}
@@ -119,12 +141,17 @@ class OC_Connector_Sabre_Server_chooser extends Sabre_DAV_Server {
 
 	public function getPropertiesForPath($path, $propertyNames = array(), $depth = 0) {
 		
-		//OC_Log::write('chooser','path: '.$path, OC_Log::WARN);
-
 		//	if ($depth!=0) $depth = 1;
 		
 		$path = rtrim($path,'/');
+		
 		$returnPropertyList = array();
+		
+		// Hide the folder completely
+		if($this->excludePath($path)){
+			return $returnPropertyList;
+		}
+		
 		$parentNode = $this->tree->getNodeForPath($path);
 		$nodes = array(
 			$path => $parentNode
@@ -132,7 +159,8 @@ class OC_Connector_Sabre_Server_chooser extends Sabre_DAV_Server {
 		if ($depth==1 && $parentNode instanceof Sabre_DAV_ICollection) {
 			$children = $this->tree->getChildren($path);
 			foreach($children as $childNode){
-				if(self::excludePath($path . '/' . $childNode->getName())){
+				//OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName(), OC_Log::WARN);
+				if($this->excludePath($path . '/' . $childNode->getName())){
 					continue;
 				}
 				$nodes[$path . '/' . $childNode->getName()] = $childNode;
@@ -140,6 +168,9 @@ class OC_Connector_Sabre_Server_chooser extends Sabre_DAV_Server {
 		} else if ($depth == self::DEPTH_INFINITY && $parentNode instanceof Sabre_DAV_ICollection) {
 			$this->addPathNodesRecursively($nodes, $path);
 		}
+		
+		//OC_Log::write('chooser','nodes: '.$path.":".$depth.":".count($nodes), OC_Log::WARN);
+
 
 		// If the propertyNames array is empty, it means all properties are requested.
 		// We shouldn't actually return everything we know though, and only return a
@@ -275,6 +306,8 @@ class OC_Connector_Sabre_Server_chooser extends Sabre_DAV_Server {
 
 		}
 
+		//OC_Log::write('chooser','Properties: '.serialize($returnPropertyList), OC_Log::WARN);
+		
 		return $returnPropertyList;
 
 	}
