@@ -47,6 +47,7 @@ class OC_Connector_Sabre_Auth_ip_auth extends Sabre_DAV_Auth_Backend_AbstractBas
 			$this->currentUser = $user_id;
 			\OC_User::setUserId($user_id);
 			OC_Util::setUpFS($user_id);
+			$_SERVER['HTTP_USER_AGENT'] = "IP_PASS:".$_SERVER['HTTP_USER_AGENT'];
 			return true;
 		}
 		else{
