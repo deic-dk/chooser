@@ -96,7 +96,7 @@ $authPlugin = new Sabre_DAV_Auth_Plugin($authBackend, $name);
 $server->addPlugin($authPlugin);
 
 if(strpos($_SERVER['REQUEST_URI'], "/files/")!==0){
-	//OC_Log::write('chooser','REQUEST '.$_SERVER['REQUEST_URI'], OC_Log::WARN);
+	//OC_Log::write('chooser','REQUEST: '.$_SERVER['REQUEST_URI']." : ".$_SERVER['REMOTE_ADDR'], OC_Log::WARN);
 	$authBackendShare = new OC_Connector_Sabre_Auth_share_auth($baseuri);
 	$authPluginShare = new Sabre_DAV_Auth_Plugin($authBackendShare, $name);
 	$server->addPlugin($authPluginShare);
@@ -122,10 +122,11 @@ $server->addPlugin(new OC_Connector_Sabre_QuotaPlugin());
 $server->addPlugin(new OC_Connector_Sabre_MaintenancePlugin());
 
 // Accept mod_rewrite internal redirects
-$_SERVER['REQUEST_URI'] = preg_replace("/^\/remote.php\/webdav/", "/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+$_SERVER['REQUEST_URI'] = preg_replace("/^\/remote.php\/webdav/", "/remote.php/mydav", $_SERVER['REQUEST_URI']);
 //$_SERVER['REQUEST_URI'] = preg_replace("/^\/files/", "/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 //OC_Log::write('chooser','REQUEST '.serialize($_SERVER), OC_Log::WARN);
 //OC_Log::write('chooser','user '.$authPlugin->getCurrentUser(), OC_Log::WARN);
+	//OC_Log::write('chooser','REQUEST: '.$_SERVER['REQUEST_URI']." : ".$_SERVER['REMOTE_ADDR'], OC_Log::WARN);
 
 // And off we go!
 $server->exec();

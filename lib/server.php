@@ -123,7 +123,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre_DAV_Server {
 		$sourcePath = $this->resolveSharedPath($path);
 
 		//if(stripos($_SERVER['HTTP_USER_AGENT'], "cadaver")===false && stripos($_SERVER['HTTP_USER_AGENT'], "curl")===false){
-		if(stripos($_SERVER['HTTP_USER_AGENT'], "mirall")===false && stripos($_SERVER['HTTP_USER_AGENT'], "csyncoC")===false){
+		if(strpos($_SERVER['HTTP_USER_AGENT'], "IP_PASS:")===0 || stripos($_SERVER['HTTP_USER_AGENT'], "mirall")===false && stripos($_SERVER['HTTP_USER_AGENT'], "csyncoC")===false && stripos($_SERVER['HTTP_USER_AGENT'], "iOs")===false && stripos($_SERVER['HTTP_USER_AGENT'], "Android-ownCloud")===false){
 			return false;
 		}
 
@@ -159,7 +159,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre_DAV_Server {
 		if ($depth==1 && $parentNode instanceof Sabre_DAV_ICollection) {
 			$children = $this->tree->getChildren($path);
 			foreach($children as $childNode){
-				//OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName(), OC_Log::WARN);
+				//OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName()." : ".$_SERVER['REMOTE_ADDR'], OC_Log::WARN);
 				if($this->excludePath($path . '/' . $childNode->getName())){
 					continue;
 				}
