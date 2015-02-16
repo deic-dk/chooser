@@ -7,7 +7,7 @@ $(document).ready(function(){
 
   $('#loadFolderTree').fileTree({
       //root: '/',
-      script: 'https://data.deic.dk/apps/chooser/jqueryFileTree.php',
+      script: '../jqueryFileTree.php',
       multiFolder: true,
       selectFile: true,
       folder: 'Download',
