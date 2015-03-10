@@ -7,7 +7,7 @@ $(document).ready(function(){
 
   $('#loadFolderTree').fileTree({
       //root: '/',
-      script: '../jqueryFileTree.php',
+      script: '../chooser/jqueryFileTree.php',
       multiFolder: true,
       selectFile: true,
       folder: 'Download',

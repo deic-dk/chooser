@@ -2,7 +2,7 @@
 
 require_once('apps/chooser/lib/lib_chooser.php');
 
-OCP\App::registerPersonal('chooser', 'settings');
+OCP\App::registerPersonal('chooser', 'personalsettings');
 
 $user_id = OC_Chooser::checkIP();
 #$user_id = "fror@dtu.dk";
