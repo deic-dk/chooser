@@ -39,7 +39,6 @@ foreach( \OC\Files\Filesystem::getDirectoryContent( $_POST['dir'] ) as $i ) {
 	}
 	$i['date'] = OCP\Util::formatDate($i['mtime'] );
 	$i['owner'] = $user;
-	OC_Log::write('chooser','Source: '.implode("::", array_keys($i))."-->".implode("::",array_values($i)), OC_Log::WARN);
 	$files[] = $i;
 }
 
