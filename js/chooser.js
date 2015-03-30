@@ -7,17 +7,17 @@ $(document).ready(function(){
 
   $('#loadFolderTree').fileTree({
       //root: '/',
-      script: '../chooser/jqueryFileTree.php',
+      script: '../../apps/chooser/jqueryFileTree.php',
       multiFolder: true,
       selectFile: true,
       folder: 'Download',
       file: $('#chosen_file').text()
-  }, function(file) {
-    $('#chosen_file').text(file);
-  }, function(file) {
-      if(file.indexOf("/", file.length-1)==-1){
+  }, /*single-click*/ function(file) {
+    /*$('#chosen_file').text(file);*/
+  }, /*double-click*/function(file) {
+      /*if(file.indexOf("/", file.length-1)==-1){// file double-clicked
         read_list_file();
         $("#dialog0").dialog("close");
-      }
+      }*/
     });
 });
