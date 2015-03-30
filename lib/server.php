@@ -27,7 +27,7 @@
  * @see \Sabre\DAV\Server
  *
  * This class is a modified version of OC_Connector_Sabre_Server, described above.
- * It allows hiding folders (/Data by default) and does not set the mime type of html files to
+ * It allows hiding folders from sync clients and does not set the mime type of html files to
  * text/plain (potential security risk).
  *
  */
@@ -119,24 +119,15 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 	* Small helper to hide folders from sync clients.
 	*/
 	private function excludePath($path){
-	
 		$sourcePath = $this->resolveSharedPath($path);
-
 		//if(stripos($_SERVER['HTTP_USER_AGENT'], "cadaver")===false && stripos($_SERVER['HTTP_USER_AGENT'], "curl")===false){
 		if(stripos($_SERVER['HTTP_USER_AGENT'], "mirall")===false && stripos($_SERVER['HTTP_USER_AGENT'], "csyncoC")===false){
 			return false;
 		}
-
-		$exclude_paths = array('/^\/*Data\//');
-		foreach($exclude_paths as $ex_path){
-			//OC_Log::write('chooser','expath: '. $sourcePath.":".$ex_path, OC_Log::WARN);
-			//if($sourcePath===$ex_path || substr($sourcePath, 0, strlen($ex_path)+1)===$ex_path."/"){
-			if($sourcePath===$ex_path || preg_match($ex_path,$sourcePath)){
-				//OC_Log::write('chooser','Excluding path: '.OC_User::getUser().":".$path.":".$sourcePath, OC_Log::WARN);
-				return true;
-			}
+		if(!\OCP\App::isEnabled('files_sharding')){
+			return false;
 		}
-		return false;
+		return \OCA\FilesSharding\Lib::inDataFolder($path);
 	}
 
 	public function getPropertiesForPath($path, $propertyNames = array(), $depth = 0) {
