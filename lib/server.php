@@ -101,6 +101,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		return $contentType;
 	}
 	
+	// TODO: get to work with sharding.
 	private function resolveSharedPath($path){
 		//$absPath = $this->tree->getFileView()->getAbsolutePath($path);
 		//$realPath = \OC\Files\Filesystem::resolvePath('/' . $absPath);

@@ -36,10 +36,20 @@ class Share extends AbstractBasic {
 		$reqPath = \OC\Files\Filesystem::normalizePath($reqPath);
 		$token = preg_replace("/^\/([^\/]*)\/.*$/", "$1", $reqPath);
 		$token = preg_replace("/^\/([^\/]*)$/", "$1", $token);
-		$linkItem = \OCP\Share::getShareByToken($token, false);
-		if (is_array($linkItem) && isset($linkItem['uid_owner'])) {
+		if(!\OCP\App::isEnabled('files_sharding') || \OCA\FilesSharding\Lib::isMaster()){
+			$linkedItem = \OCP\Share::getShareByToken($token, false);
+		}
+		else{
+			$linkedItem = \OCA\FilesSharding\Lib::ws('getShareByToken', array('t'=>$token));
+		}
+		if (isset($linkItem) && is_array($linkItem) && isset($linkItem['uid_owner'])) {
 			// seems to be a valid share
-			$rootLinkItem = \OCP\Share::resolveReShare($linkItem);
+			if(!\OCP\App::isEnabled('files_sharding') || \OCA\FilesSharding\Lib::isMaster()){
+				$rootLinkItem = \OCP\Share::resolveReShare($linkItem);
+			}
+			else{
+				$rootLinkItem = \OCA\FilesSharding\Lib::ws('resolveReShare', array('linkItem'=>$linkItem));
+			}
 			if (isset($rootLinkItem['uid_owner'])) {
 				\OCP\JSON::checkUserExists($rootLinkItem['uid_owner']);
 				\OC_Util::tearDownFS();

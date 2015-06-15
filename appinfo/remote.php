@@ -61,8 +61,8 @@ OC_Util::obEnd();
 // Create ownCloud Dir
 //$rootDir = new OC_Connector_Sabre_Directory('');
 //$objectTree = new \OC\Connector\Sabre\ObjectTree($rootDir);
-//$objectTree = new Share_ObjectTree($rootDir);
-$objectTree = new \OC\Connector\Sabre\ObjectTree();
+$objectTree = new Share_ObjectTree();
+//$objectTree = new \OC\Connector\Sabre\ObjectTree();
 
 //$server = new Sabre_DAV_Server($rootDir);
 $server = new OC_Connector_Sabre_Server_chooser($objectTree);

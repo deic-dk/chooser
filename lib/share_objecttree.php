@@ -19,7 +19,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 		(strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' || strtolower($_SERVER['REQUEST_METHOD'])=='put' ||
 		strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
 		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch')){
-			throw new Sabre_DAV_Exception_Forbidden($_SERVER['REQUEST_METHOD'].' not allowed. '.$this->allowUpload);
+			throw new \Sabre\DAV\Exception\Forbidden($_SERVER['REQUEST_METHOD'].' not allowed. '.$this->allowUpload);
 		}
 	
 		$this->fixPath($path);
@@ -36,7 +36,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 
 		if (pathinfo($path, PATHINFO_EXTENSION) === 'part') {
 			// read from storage
-			$absPath = $this->getFileView()->getAbsolutePath($path);
+			$absPath = $this->fileView->getAbsolutePath($path);
 			list($storage, $internalPath) = Filesystem::resolvePath('/' . $absPath);
 			if ($storage) {
 				$scanner = $storage->getScanner($internalPath);
@@ -46,20 +46,19 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 		}
 		else {
 			// read from cache
-			$info = $this->getFileView()->getFileInfo($path);
+			$info = $this->fileView->getFileInfo($path);
 		}
 
 		if (!$info) {
-			throw new \Sabre_DAV_Exception_NotFound('File with name ' . $path . ' could not be located');
+			throw new \Sabre\DAV\Exception\NotFound('File with name ' . $path . ' could not be located');
 		}
 
-		if ($info['mimetype'] === 'httpd/unix-directory') {
-			$node = new \OC_Connector_Sabre_Directory($path);
+		
+		if ($info->getType() === 'dir') {
+			$node = new \OC_Connector_Sabre_Directory($this->fileView, $info);
 		} else {
-			$node = new \OC_Connector_Sabre_File($path);
+			$node = new \OC_Connector_Sabre_File($this->fileView, $info);
 		}
-
-		$node->setFileinfoCache($info);
 		
 		$this->cache[$path] = $node;
 		return $node;
