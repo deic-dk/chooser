@@ -109,7 +109,12 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		//OC_Log::write('chooser','path: '.$path, OC_Log::WARN);
 		if(preg_match('/^\/*Shared\//',$path)){
 			$sharePath = preg_replace('/^\/*Shared\//', '', $path);
-			$sourcePath = \OC_Share_Backend_File::getSource($sharePath);
+			if(\OCP\App::isEnabled('files_sharding')){
+				$sourcePath = \OC_Shard_Backend_File::getSource($sharePath);
+			}
+			else{
+				$sourcePath = \OC_Share_Backend_File::getSource($sharePath);
+			}
 			$path = preg_replace('/^\/*files\//', '/', $sourcePath['path']);
 			//OC_Log::write('chooser','path: '.$sharePath.':'.$path, OC_Log::WARN);
 		}
