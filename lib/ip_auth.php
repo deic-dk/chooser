@@ -27,6 +27,10 @@ class IP extends AbstractBasic {
 	 * @return bool
 	 */
 	protected function validateUserPass($username, $password) {
+			if(isset($_SERVER['PHP_AUTH_USER'])){
+			OC_Log::write('chooser','user_id '.$_SERVER['PHP_AUTH_USER'],OC_Log::INFO);
+			return false;
+		}
 		$user_id = \OC_Chooser::checkIP();
 		if($user_id != '' && \OC_User::userExists($user_id)){
 			$this->currentUser = $user_id;
@@ -40,6 +44,10 @@ class IP extends AbstractBasic {
 	}
 
 	public function authenticate(\Sabre\DAV\Server $server, $realm) {
+		if(isset($_SERVER['PHP_AUTH_USER'])){
+			OC_Log::write('chooser','user_id '.$_SERVER['PHP_AUTH_USER'],OC_Log::INFO);
+			return false;
+		}
 		$user_id = \OC_Chooser::checkIP();
 		/*if($user_id == '' || !\OC_User::userExists($user_id)){
 			throw new \Sabre\DAV\Exception\NotAuthenticated('Not a valid IP address / userid, ' . $user_id);
@@ -48,6 +56,8 @@ class IP extends AbstractBasic {
 			$this->currentUser = $user_id;
 			\OC_User::setUserId($user_id);
 			\OC_Util::setUpFS($user_id);
+			// Uncomment this to unhide /Data for clients from the local subnet
+			//$_SERVER['HTTP_USER_AGENT'] = "IP_PASS:".$_SERVER['HTTP_USER_AGENT'];
 			return true;
 		}
 		else{
