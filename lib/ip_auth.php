@@ -27,7 +27,7 @@ class IP extends AbstractBasic {
 	 * @return bool
 	 */
 	protected function validateUserPass($username, $password) {
-			if(isset($_SERVER['PHP_AUTH_USER'])){
+		if(isset($_SERVER['PHP_AUTH_USER'])){
 			OC_Log::write('chooser','user_id '.$_SERVER['PHP_AUTH_USER'],OC_Log::INFO);
 			return false;
 		}
