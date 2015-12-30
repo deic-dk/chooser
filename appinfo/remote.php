@@ -34,6 +34,7 @@ OC_Log::write('chooser','Remote access',OC_Log::INFO);
 
 require_once 'chooser/lib/ip_auth.php';
 require_once 'chooser/lib/share_auth.php';
+require_once 'chooser/lib/nbf_auth.php';
 require_once 'chooser/lib/server.php';
 require_once 'chooser/lib/share_objecttree.php';
 
@@ -92,7 +93,8 @@ $authBackendIP = new Sabre\DAV\Auth\Backend\IP();
 $authPluginIP = new Sabre\DAV\Auth\Plugin($authBackendIP, $name);//should use $validTokens here
 $server->addPlugin($authPluginIP);
 
-$authBackend = new OC_Connector_Sabre_Auth();
+//$authBackend = new OC_Connector_Sabre_Auth();
+$authBackend = new OC_Connector_Sabre_Auth_NBF();
 $authPlugin = new Sabre\DAV\Auth\Plugin($authBackend, $name);
 $server->addPlugin($authPlugin);
 
@@ -136,7 +138,7 @@ $_SERVER['REQUEST_URI'] = preg_replace("/^\/remote.php\/davs/", "/remote.php/myd
 $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 	$view = \OC\Files\Filesystem::getView();
 	$rootInfo = $view->getFileInfo('');
-
+	
 	// Create ownCloud Dir
 	$mountManager = \OC\Files\Filesystem::getMountManager();
 	$rootDir = new OC_Connector_Sabre_Directory($view, $rootInfo);
@@ -144,6 +146,10 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 
 	$server->addPlugin(new OC_Connector_Sabre_QuotaPlugin($view));
 }, 30); // priority 30: after auth (10) and acl(20), before lock(50) and handling the request
+
+// This is picked up by Apache's logging.
+// The same statement is in /lib/base.php - TODO: put this in some hook.
+apache_note( 'username', \OC_User::getUser() );
 
 // And off we go!
 $server->exec();

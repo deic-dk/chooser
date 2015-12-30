@@ -45,9 +45,16 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		// The only two options for the depth of a propfind is 0 or 1
 		// if ($depth!=0) $depth = 1;
 		
-		if(array_key_exists('REDIRECT_URL', $_SERVER) && (strpos($_SERVER['REDIRECT_URL'], "/remote.php/webdav/")===0 || $_SERVER['REDIRECT_URL']==="/remote.php/webdav")){
-			$this->setBaseUri("/remote.php/webdav/");
+		if(array_key_exists('REDIRECT_URL', $_SERVER)){
+			$redirect_uri = preg_replace('/^https*:\/\/[^\/]+\//', '/', $_SERVER['REDIRECT_URL']);
+			if(strpos($redirect_uri, "/remote.php/webdav/")===0 ||
+						$redirect_uri==="/remote.php/webdav"){
+				$redirect_url = preg_replace('/mydav.*/', 'webdav/', $_SERVER['REDIRECT_URL'], 1);
+				$this->setBaseUri("/remote.php/webdav/");
+			}
 		}
+		
+		//$newProperties['href'] = preg_replace('/^(\/*remote.php\/)mydav\//', '$1/wdav/', trim($myPath,'/'));
 		
 		//OC_Log::write('chooser','uri: '.$uri, OC_Log::WARN);
 
