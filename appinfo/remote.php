@@ -30,7 +30,7 @@
 
 // curl --insecure --request PROPFIND https://10.2.0.254/remote.php/mydav/test/
 
-OC_Log::write('chooser','Remote access',OC_Log::INFO);
+OC_Log::write('chooser','Remote access',OC_Log::DEBUG);
 
 require_once 'chooser/lib/ip_auth.php';
 require_once 'chooser/lib/share_auth.php';
