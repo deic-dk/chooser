@@ -151,7 +151,29 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 // The same statement is in /lib/base.php - TODO: put this in some hook.
 apache_note( 'username', \OC_User::getUser() );
 
+$ok = true;
+$userServerAccess = \OCA\FilesSharding\Lib::getUserServerAccess();
+// Block all access if account is locked on server
+if(\OCP\App::isEnabled('files_sharding') &&
+		$userServerAccess ==\OCA\FilesSharding\Lib::$USER_ACCESS_NONE){
+	$ok = false;
+}
+
+// Block write operations on r/o server
+if(\OCP\App::isEnabled('files_sharding') &&
+		$userServerAccess==\OCA\FilesSharding\Lib::$USER_ACCESS_READ_ONLY &&
+		(strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' || strtolower($_SERVER['REQUEST_METHOD'])=='put' ||
+		strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
+		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch')){
+	$ok = false;
+}
+
 // And off we go!
-$server->exec();
+if($ok){
+	$server->exec();
+}
+else{
+	throw new \Sabre\DAV\Exception\Forbidden($_SERVER['REQUEST_METHOD'].' currently not allowed.');
+}
 
 
