@@ -27,7 +27,7 @@ class IP extends AbstractBasic {
 	 * @return bool
 	 */
 	protected function validateUserPass($username, $password) {
-		if(isset($_SERVER['PHP_AUTH_USER'])){
+		if(!empty($_SERVER['PHP_AUTH_USER']) && !empty($_SERVER['PHP_AUTH_PW'])){
 			\OC_Log::write('chooser','user_id '.$_SERVER['PHP_AUTH_USER'],\OC_Log::INFO);
 			return false;
 		}
@@ -44,7 +44,7 @@ class IP extends AbstractBasic {
 	}
 
 	public function authenticate(\Sabre\DAV\Server $server, $realm) {
-		if(isset($_SERVER['PHP_AUTH_USER'])){
+		if(!empty($_SERVER['PHP_AUTH_USER']) && !empty($_SERVER['PHP_AUTH_PW'])){
 			\OC_Log::write('chooser','user_id '.$_SERVER['PHP_AUTH_USER'],\OC_Log::INFO);
 			return false;
 		}
