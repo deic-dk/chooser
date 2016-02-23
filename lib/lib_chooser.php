@@ -9,8 +9,8 @@ class OC_Chooser {
     const IPS_CACHE_KEY = 'compute_ips';
 
     public static function checkIP(){
-        OC_Log::write('chooser', 'Client IP '.$_SERVER['REMOTE_ADDR'], OC_Log::DEBUG);
-        if(strpos($_SERVER['REMOTE_ADDR'], OC_Chooser::TRUSTED_NET) === 0){
+        //OC_Log::write('chooser', 'Client IP '.isset($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:'', OC_Log::DEBUG);
+        if(isset($_SERVER['REMOTE_ADDR']) && strpos($_SERVER['REMOTE_ADDR'], OC_Chooser::TRUSTED_NET) === 0){
         	$user_id = '';
         	if(($list_array = apc_fetch(OC_Chooser::IPS_CACHE_KEY)) === false){
         		$list_line = file_get_contents("https://".OC_Chooser::COMPUTE_IP."/steamengine/networks?f=1&action=tablelist");
@@ -35,7 +35,7 @@ class OC_Chooser {
         	OC_Log::write('chooser', 'user_id: '.$user_id, OC_Log::DEBUG);
         	return $user_id;
         }
-        elseif(strpos($_SERVER['REMOTE_ADDR'], OC_Chooser::ADMIN_NET) === 0){
+        elseif(isset($_SERVER['REMOTE_ADDR']) && strpos($_SERVER['REMOTE_ADDR'], OC_Chooser::ADMIN_NET) === 0){
         	if(isset($_SERVER['PHP_AUTH_USER']) && \OC_User::userExists($_SERVER['PHP_AUTH_USER'])){
         		OC_Log::write('chooser', 'user_id: '.$_SERVER['PHP_AUTH_USER'], OC_Log::DEBUG);
         		\OC::$session->set('user_id', $_SERVER['PHP_AUTH_USER']);
