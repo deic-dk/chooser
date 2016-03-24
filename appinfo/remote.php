@@ -173,7 +173,8 @@ if($ok){
 	$server->exec();
 }
 else{
-	throw new \Sabre\DAV\Exception\Forbidden($_SERVER['REQUEST_METHOD'].' currently not allowed.');
+	//throw new \Sabre\DAV\Exception\Forbidden($_SERVER['REQUEST_METHOD'].' currently not allowed.');
+	$server->httpResponse->sendStatus(403);
 }
 
 
