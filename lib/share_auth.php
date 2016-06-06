@@ -44,8 +44,11 @@ class Share extends AbstractBasic {
 		}
 		if (isset($linkItem) && is_array($linkItem) && isset($linkItem['uid_owner'])) {
 			// seems to be a valid share
-			if(!\OCP\App::isEnabled('files_sharding') || \OCA\FilesSharding\Lib::isMaster()){
+			if(!\OCP\App::isEnabled('files_sharding')){
 				$rootLinkItem = \OCP\Share::resolveReShare($linkItem);
+			}
+			elseif(!\OCA\FilesSharding\Lib::isMaster()){
+				$rootLinkItem = \OCA\FilesSharding\Lib::resolveReShare($linkItem);
 			}
 			else{
 				$rootLinkItem = \OCA\FilesSharding\Lib::ws('resolveReShare', array('linkItem'=>$linkItem));
