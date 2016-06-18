@@ -18,3 +18,5 @@ else{
 	   \OC_Util::setupFS();
 	}
 }
+
+require_once('apps/chooser/appinfo/apache_note_user.php');

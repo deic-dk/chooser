@@ -147,9 +147,7 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 	$server->addPlugin(new OC_Connector_Sabre_QuotaPlugin($view));
 }, 30); // priority 30: after auth (10) and acl(20), before lock(50) and handling the request
 
-// This is picked up by Apache's logging.
-// The same statement is in /lib/base.php - TODO: put this in some hook.
-apache_note( 'username', \OC_User::getUser() );
+require_once('apps/chooser/appinfo/apache_note_user.php');
 
 $ok = true;
 $userServerAccess = \OCA\FilesSharding\Lib::getUserServerAccess();
