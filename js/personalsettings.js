@@ -6,7 +6,7 @@ function toggleDav() {
 	        //alert(xhr.responseText);
 	    }
 	}
-	xhr.open('GET', '/apps/chooser/ajax/toggle_dav.php', true);
+	xhr.open('GET', OC.webroot + '/apps/chooser/ajax/toggle_dav.php', true);
 	xhr.send();
 }
 $(document).ready(function(){
