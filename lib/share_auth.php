@@ -42,51 +42,52 @@ class Share extends AbstractBasic {
 		else{
 			$linkedItem = \OCA\FilesSharding\Lib::ws('getShareByToken', array('t'=>$token));
 		}
-		if (isset($linkItem) && is_array($linkItem) && isset($linkItem['uid_owner'])) {
+		\OCP\Util::writeLog('files_sharding', 'Got share by token: '.serialize($linkedItem), \OC_Log::WARN);
+		if (isset($linkedItem) && is_array($linkedItem) && isset($linkedItem['uid_owner'])) {
 			// seems to be a valid share
 			if(!\OCP\App::isEnabled('files_sharding')){
-				$rootLinkItem = \OCP\Share::resolveReShare($linkItem);
+				$rootLinkItem = \OCP\Share::resolveReShare($linkedItem);
 			}
 			elseif(!\OCA\FilesSharding\Lib::isMaster()){
-				$rootLinkItem = \OCA\FilesSharding\Lib::resolveReShare($linkItem);
+				$rootLinkItem = \OCA\FilesSharding\Lib::resolveReShare($linkedItem);
 			}
 			else{
-				$rootLinkItem = \OCA\FilesSharding\Lib::ws('resolveReShare', array('linkItem'=>$linkItem));
+				$rootLinkItem = \OCA\FilesSharding\Lib::ws('resolveReShare', array('linkItem'=>$linkedItem));
 			}
 			if (isset($rootLinkItem['uid_owner'])) {
 				\OCP\JSON::checkUserExists($rootLinkItem['uid_owner']);
 				\OC_Util::tearDownFS();
 				\OC_Util::setupFS($rootLinkItem['uid_owner']);
 				$this->token = $token;
-				$this->path = \OC\Files\Filesystem::getPath($linkItem['file_source']);
+				$this->path = \OC\Files\Filesystem::getPath($rootLinkItem['item_source']);
 				$this->path = preg_replace("/^\//", "", $this->path);
-				\OC_Log::write('chooser','Token: '.$token.', path: '.$this->path.', owner: '.$rootLinkItem['uid_owner'], \OC_Log::INFO);
+				\OC_Log::write('chooser','Token: '.$token.', path: '.$this->path.', owner: '.$rootLinkItem['uid_owner'], \OC_Log::WARN);
 			}
 		}
-		if($this->path==null || !isset($linkItem['item_type'])){
+		if($this->path==null || !isset($linkedItem['item_type'])){
 			return;
 		}
-		// $linkItem['share_with'] holds the hashed password for $linkItem['share_type'] == \OCP\Share::SHARE_TYPE_LINK
+		// $linkedItem['share_with'] holds the hashed password for $linkedItem['share_type'] == \OCP\Share::SHARE_TYPE_LINK
 		// - which is the share_type we're concerned with here
-		if(isset($linkItem['share_with'])){
+		if(isset($linkedItem['share_with'])){
 			if(isset($_SERVER['PHP_AUTH_USER'])){
 				// We don't care what username is supplied - the uid will be set to that of the one owning the shared item
-				$this->userId = $this->check_password($linkItem['uid_owner'], $_SERVER['PHP_AUTH_PW'], $linkItem['share_with']);
+				$this->userId = $this->check_password($linkedItem['uid_owner'], $_SERVER['PHP_AUTH_PW'], $linkedItem['share_with']);
 			}
 		}
 		else{
-			$this->userId = $linkItem['uid_owner'];
+			$this->userId = $linkedItem['uid_owner'];
 		}
 		if($this->userId!=null && trim($this->userId)!==''){
 			if(\OC_Appconfig::getValue('core', 'shareapi_allow_public_upload', 'yes')==='yes'){
-				\OC_Log::write('chooser','Permissions: '.$linkItem['permissions'], \OC_Log::INFO);
-				$this->allowUpload = (bool) ($linkItem['permissions'] & \OCP\PERMISSION_CREATE);
+				\OC_Log::write('chooser','Permissions: '.$linkedItem['permissions'], \OC_Log::INFO);
+				$this->allowUpload = (bool) ($linkedItem['permissions'] & \OCP\PERMISSION_CREATE);
 			}
 		}
 		$this->currentUser = $this->userId;
 		\OC_User::setUserId($this->userId);
 		\OC_Util::setUpFS($this->userId);
-		\OC_Log::write('chooser','userId: '.$this->userId, \OC_Log::DEBUG);
+		\OC_Log::write('chooser','userId: '.$this->userId, \OC_Log::WARN);
 	}
 
 	/**
@@ -98,7 +99,7 @@ class Share extends AbstractBasic {
 	 * @return bool
 	 */
 	protected function validateUserPass($username, $password) {
-		\OC_Log::write('chooser','Validating: '.$this->userId, \OC_Log::DEBUG);
+		\OC_Log::write('chooser','Validating: '.$this->userId, \OC_Log::WARN);
 		if($this->userId != '' && \OC_User::userExists($this->userId)){
 			$this->currentUser = $this->userId;
 			\OC_User::setUserId($this->userId);
@@ -111,11 +112,12 @@ class Share extends AbstractBasic {
 	}
 
 	public function authenticate(\Sabre\DAV\Server $server, $realm) {
-		\OC_Log::write('chooser','Authenticating: '.$this->userId, \OC_Log::DEBUG);
+		\OC_Log::write('chooser','Authenticating: '.$this->userId, \OC_Log::WARN);
 		if($this->userId != '' && \OC_User::userExists($this->userId)){
 			$this->currentUser = $this->userId;
-			\OC_User::setUserId($this->userId);
+			//\OC_User::setUserId($this->userId);
 			\OC_Util::setUpFS($this->userId);
+			\OC_Log::write('chooser','Authenticion: all good for '.$this->userId, \OC_Log::WARN);
 			return true;
 		}
 		else{
