@@ -36,23 +36,31 @@ class Share extends AbstractBasic {
 		$reqPath = \OC\Files\Filesystem::normalizePath($reqPath);
 		$token = preg_replace("/^\/([^\/]*)\/.*$/", "$1", $reqPath);
 		$token = preg_replace("/^\/([^\/]*)$/", "$1", $token);
+		if(empty($token)){
+			return false;
+		}
 		if(!\OCP\App::isEnabled('files_sharding') || \OCA\FilesSharding\Lib::isMaster()){
 			$linkedItem = \OCP\Share::getShareByToken($token, false);
 		}
 		else{
 			$linkedItem = \OCA\FilesSharding\Lib::ws('getShareByToken', array('t'=>$token));
 		}
-		\OCP\Util::writeLog('files_sharding', 'Got share by token: '.serialize($linkedItem), \OC_Log::WARN);
+		if(empty($linkedItem)){
+			return false;
+		}
+		
+		\OCP\Util::writeLog('files_sharding', 'Got share by token: '. $token . '-->' . serialize($linkedItem), \OC_Log::WARN);
 		if (isset($linkedItem) && is_array($linkedItem) && isset($linkedItem['uid_owner'])) {
 			// seems to be a valid share
 			if(!\OCP\App::isEnabled('files_sharding')){
 				$rootLinkItem = \OCP\Share::resolveReShare($linkedItem);
 			}
-			elseif(!\OCA\FilesSharding\Lib::isMaster()){
+			elseif(\OCA\FilesSharding\Lib::isMaster()){
 				$rootLinkItem = \OCA\FilesSharding\Lib::resolveReShare($linkedItem);
 			}
 			else{
-				$rootLinkItem = \OCA\FilesSharding\Lib::ws('resolveReShare', array('linkItem'=>$linkedItem));
+				$rootLinkItem = \OCA\FilesSharding\Lib::ws('resolveReShare',
+					array('linkItem'=>\OCP\JSON::encode($linkedItem)));
 			}
 			if (isset($rootLinkItem['uid_owner'])) {
 				\OCP\JSON::checkUserExists($rootLinkItem['uid_owner']);
@@ -65,7 +73,7 @@ class Share extends AbstractBasic {
 			}
 		}
 		if($this->path==null || !isset($linkedItem['item_type'])){
-			return;
+			return false;
 		}
 		// $linkedItem['share_with'] holds the hashed password for $linkedItem['share_type'] == \OCP\Share::SHARE_TYPE_LINK
 		// - which is the share_type we're concerned with here
@@ -117,7 +125,7 @@ class Share extends AbstractBasic {
 			$this->currentUser = $this->userId;
 			//\OC_User::setUserId($this->userId);
 			\OC_Util::setUpFS($this->userId);
-			\OC_Log::write('chooser','Authenticion: all good for '.$this->userId, \OC_Log::WARN);
+			\OC_Log::write('chooser','Authentication: all good for '.$this->userId, \OC_Log::WARN);
 			return true;
 		}
 		else{
