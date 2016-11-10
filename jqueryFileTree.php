@@ -19,10 +19,19 @@
 
 \OCP\JSON::checkLoggedIn();
 \OCP\JSON::checkAppEnabled('chooser');
-// Show folders shared via user_group_admin if available
+
+$user = \OC_User::getUser();
+
 if(OCP\App::isEnabled('user_group_admin')){
+	// Show folders shared via user_group_admin if available
 	OC::$CLASSPATH['OC_User_Group_Admin_Backend'] ='apps/user_group_admin/lib/backend.php';
-	OC_Group::useBackend( new OC_User_Group_Admin_Backend() );
+	OC_Group::useBackend(new OC_User_Group_Admin_Backend());
+	// Allow browsing group folders
+	if(!empty($_POST['group'])){
+		\OC\Files\Filesystem::tearDown();
+		$groupDir = '/'.$user.'/user_group_admin/'.$_POST['group'];
+		\OC\Files\Filesystem::init($user, $groupDir);
+	}
 }
 
 $_POST['dir'] = urldecode($_POST['dir']);
@@ -31,7 +40,6 @@ if( $_POST['dir']!= '' && !\OC\Files\Filesystem::file_exists($_POST['dir']) ) {
 	exit;
 }
 
-$user = \OC_User::getUser();
 $files = array();
 foreach( \OC\Files\Filesystem::getDirectoryContent( $_POST['dir'] ) as $i ) {
 	if(array_key_exists('path', $i) && (basename($i['path']) == '.' || basename($i['path']) == '..')){

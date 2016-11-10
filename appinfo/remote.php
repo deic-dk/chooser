@@ -73,13 +73,13 @@ $server->httpRequest = $requestBackend;
 
 // Path
 //$baseuri = OC_App::getAppWebPath('chooser').'appinfo/remote.php';
-$baseuri = "/remote.php/mydav";
+$baseuri = OC::$WEBROOT."/remote.php/mydav";
 // Known aliases
 if(strpos($_SERVER['REQUEST_URI'], "/files/")===0){
-	$baseuri = "/files";
+	$baseuri = OC::$WEBROOT."/files";
 }
 if(strpos($_SERVER['REQUEST_URI'], "/public/")===0){
-	$baseuri = "/public";
+	$baseuri = OC::$WEBROOT."/public";
 }
 $server->setBaseUri($baseuri);
 
@@ -127,9 +127,9 @@ $server->addPlugin(new OC_Connector_Sabre_MaintenancePlugin());
 $server->addPlugin(new OC_Connector_Sabre_ExceptionLoggerPlugin('davs'));
 
 // Accept mod_rewrite internal redirects.
-$_SERVER['REQUEST_URI'] = preg_replace("/^\/remote.php\/webdav/", "/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+$_SERVER['REQUEST_URI'] = preg_replace("/^".OC::$WEBROOT."\/remote.php\/webdav/", OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 // Accept include by remote.php from files_sharding.
-$_SERVER['REQUEST_URI'] = preg_replace("/^\/remote.php\/davs/", "/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+$_SERVER['REQUEST_URI'] = preg_replace("/^".OC::$WEBROOT."\/remote.php\/davs/", OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 //$_SERVER['REQUEST_URI'] = preg_replace("/^\/files/", "/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 //OC_Log::write('chooser','REQUEST '.serialize($_SERVER), OC_Log::WARN);
 //OC_Log::write('chooser','user '.$authPlugin->getCurrentUser(), OC_Log::WARN);

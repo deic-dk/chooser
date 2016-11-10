@@ -43,6 +43,7 @@ if(jQuery) (function($){
 			if( !o ) var o = {};
 			if( o.root == undefined ) o.root = '/';
 			if( o.folder == undefined ) o.folder = '';
+			if( o.group == undefined ) o.group = '';
 			if( o.file == undefined ) o.file = '';
 			if( o.script == undefined ) o.script = 'jqueryFileTree.php';
 			if( o.folderEvent == undefined ) o.folderEvent = 'click';
@@ -95,7 +96,7 @@ if(jQuery) (function($){
 			function showTree(c, t) {
 				$(c).addClass('wait');
 				$(".jqueryFileTree.start").remove();
-				$.post(o.script, { dir: t }, function(data) {
+				$.post(o.script, { dir: t, group: o.group }, function(data) {
 					$(c).find('.start').html('');
 					$(c).removeClass('wait').append(data);
 					if( o.root == t ) $(c).find('UL:hidden').show(); else $(c).find('UL:hidden').slideDown({ duration: o.expandSpeed, easing: o.expandEasing });

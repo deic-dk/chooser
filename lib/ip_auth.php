@@ -42,6 +42,10 @@ class IP extends AbstractBasic {
 			return false;
 		}
 	}
+	
+	public function checkUserPass($username, $password) {
+		return $this->validateUserPass($username, $password);
+	}
 
 	public function authenticate(\Sabre\DAV\Server $server, $realm) {
 		if(!empty($_SERVER['PHP_AUTH_USER']) && !empty($_SERVER['PHP_AUTH_PW'])){

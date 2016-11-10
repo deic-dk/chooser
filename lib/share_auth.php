@@ -12,7 +12,7 @@ require_once('3rdparty/sabre/dav/lib/Sabre/DAV/Auth/Backend/AbstractBasic.php');
 
 class Share extends AbstractBasic {
 
-	private static $baseUri = "/remote.php/mydav";
+	private static $baseUri = OC::$WEBROOT."/remote.php/mydav";
 	public $userId = '';
 	
 	public $allowUpload = false;
@@ -49,7 +49,7 @@ class Share extends AbstractBasic {
 			return false;
 		}
 		
-		\OCP\Util::writeLog('files_sharding', 'Got share by token: '. $token . '-->' . serialize($linkedItem), \OC_Log::WARN);
+		\OCP\Util::writeLog('chooser', 'Got share by token: '. $token . '-->' . serialize($linkedItem), \OC_Log::WARN);
 		if (isset($linkedItem) && is_array($linkedItem) && isset($linkedItem['uid_owner'])) {
 			// seems to be a valid share
 			if(!\OCP\App::isEnabled('files_sharding')){

@@ -47,10 +47,10 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		
 		if(array_key_exists('REDIRECT_URL', $_SERVER)){
 			$redirect_uri = preg_replace('/^https*:\/\/[^\/]+\//', '/', $_SERVER['REDIRECT_URL']);
-			if(strpos($redirect_uri, "/remote.php/webdav/")===0 ||
-						$redirect_uri==="/remote.php/webdav"){
-				$redirect_url = preg_replace('/mydav.*/', 'webdav/', $_SERVER['REDIRECT_URL'], 1);
-				$this->setBaseUri("/remote.php/webdav/");
+			if(strpos($redirect_uri, OC::$WEBROOT."/remote.php/webdav/")===0 ||
+						$redirect_uri===OC::$WEBROOT."/remote.php/webdav"){
+				//$redirect_url = preg_replace('|'.OC::$WEBROOT.'/mydav/|', OC::$WEBROOT.'/webdav/', $_SERVER['REDIRECT_URL'], 1);
+				$this->setBaseUri(OC::$WEBROOT."/remote.php/webdav/");
 			}
 		}
 		

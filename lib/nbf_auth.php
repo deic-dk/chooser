@@ -42,5 +42,9 @@ class OC_Connector_Sabre_Auth_NBF extends OC_Connector_Sabre_Auth {
 			}
 		}
 	}
+	
+	public function checkUserPass($username, $password) {
+		return $this->validateUserPass($username, $password);
+	}
 
 } 
