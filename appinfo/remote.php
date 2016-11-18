@@ -33,6 +33,7 @@
 OC_Log::write('chooser','Remote access',OC_Log::DEBUG);
 
 require_once 'chooser/lib/ip_auth.php';
+require_once 'chooser/lib/x509_auth.php';
 require_once 'chooser/lib/share_auth.php';
 require_once 'chooser/lib/nbf_auth.php';
 require_once 'chooser/lib/server.php';
@@ -90,8 +91,12 @@ $name = $defaults->getName();
 //$_SERVER['REQUEST_URI'] = preg_replace("/^\/public/", "/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 
 $authBackendIP = new Sabre\DAV\Auth\Backend\IP();
-$authPluginIP = new Sabre\DAV\Auth\Plugin($authBackendIP, $name);//should use $validTokens here
+$authPluginIP = new Sabre\DAV\Auth\Plugin($authBackendIP, $name);
 $server->addPlugin($authPluginIP);
+
+$authBackendX509 = new Sabre\DAV\Auth\Backend\X509();
+$authPluginX509 = new Sabre\DAV\Auth\Plugin($authBackendX509, $name);
+$server->addPlugin($authPluginX509);
 
 //$authBackend = new OC_Connector_Sabre_Auth();
 $authBackend = new OC_Connector_Sabre_Auth_NBF();

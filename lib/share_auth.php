@@ -12,7 +12,7 @@ require_once('3rdparty/sabre/dav/lib/Sabre/DAV/Auth/Backend/AbstractBasic.php');
 
 class Share extends AbstractBasic {
 
-	private static $baseUri = OC::$WEBROOT."/remote.php/mydav";
+	private static $baseUri = "/remote.php/mydav";
 	public $userId = '';
 	
 	public $allowUpload = false;

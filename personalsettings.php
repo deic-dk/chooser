@@ -10,5 +10,6 @@ OCP\Util::addscript('chooser', 'personalsettings');
 $tmpl = new OCP\Template( 'chooser', 'personalsettings');
 
 $tmpl->assign('is_enabled', OC_Chooser::getEnabled());
+$tmpl->assign('ssl_cert_dn', OC_Chooser::getCertSubject(OCP\USER::getUser()));
 
 return $tmpl->fetchPage();

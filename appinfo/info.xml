@@ -14,6 +14,8 @@
     <standalone />
     <remote>
       <mydav>appinfo/remote.php</mydav>
+      <addcert>appinfo/addcert.php</addcert>
+      <removecert>appinfo/removecert.php</removecert>
     </remote>
 		<!-- seems not to work -->
 		<!-- <public>

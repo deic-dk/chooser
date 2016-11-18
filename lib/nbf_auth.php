@@ -26,7 +26,7 @@ class OC_Connector_Sabre_Auth_NBF extends OC_Connector_Sabre_Auth {
 				$login_attempts = apc_fetch($cache_key);
 			}
 			if($login_attempts>2){
-				\OCP\Util::writeLog('login', 'Too many falied login attempts: '.$cache_key.'-->'.$login_attempts, \OC_Log::ERROR);
+				\OCP\Util::writeLog('login', 'Too many failed login attempts: '.$cache_key.'-->'.$login_attempts, \OC_Log::ERROR);
 				die();
 			}
 			OC_Util::setUpFS();//login hooks may need early access to the filesystem

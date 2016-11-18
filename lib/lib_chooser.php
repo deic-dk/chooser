@@ -8,6 +8,8 @@ class OC_Chooser {
     const IPS_TTL_SECONDS = 30;
     const IPS_CACHE_KEY = 'compute_ips';
 
+    public static $MAX_CERTS = 10;
+
     public static function checkIP(){
         //OC_Log::write('chooser', 'Client IP '.isset($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:'', OC_Log::DEBUG);
         if(isset($_SERVER['REMOTE_ADDR']) && strpos($_SERVER['REMOTE_ADDR'], OC_Chooser::TRUSTED_NET) === 0){
@@ -54,7 +56,38 @@ class OC_Chooser {
         if($value != 'yes' && $value != 'no'){
             throw new \Exception("Must be yes or no: $value");
         }
-        OCP\Config::setUserValue(OCP\USER::getUser(), 'chooser', 'allow_internal_dav', $value);
+        return OCP\Config::setUserValue(OCP\USER::getUser(), 'chooser', 'allow_internal_dav', $value);
+    }
+
+    public static function getCertIndex($user) {
+    	$index = 0;
+    	while($index<self::$MAX_CERTS){
+    		$subject = OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
+    		if(empty($subject)){
+    			return $index;
+    		}
+    		++$index;
+    	}
+    	return -1;
+    }
+
+    public static function getCertSubject($user, $index=0){
+    	return OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
+    }
+
+    public static function addCert($user, $subject) {
+    	$index = self::getCertIndex($user);
+    	if($index<0){
+    		return false;
+    	}
+    	return OCP\Config::setUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index, $subject);
+    }
+
+    public static function removeCert($user, $subject) {
+    	$sql = "delete FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey LIKE ? AND configvalue = ?";
+    	$args = array($user, 'chooser', 'ssl_certificate_subject_%', $subject);
+    	$query = \OCP\DB::prepare($sql);
+    	return $query->execute($args);
     }
 
 }
