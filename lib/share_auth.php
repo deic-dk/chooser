@@ -120,7 +120,7 @@ class Share extends AbstractBasic {
 	}
 
 	public function authenticate(\Sabre\DAV\Server $server, $realm) {
-		\OC_Log::write('chooser','Authenticating: '.$this->userId, \OC_Log::WARN);
+		\OC_Log::write('chooser','Authenticating: '.$this->userId, \OC_Log::INFO);
 		if($this->userId != '' && \OC_User::userExists($this->userId)){
 			$this->currentUser = $this->userId;
 			//\OC_User::setUserId($this->userId);
