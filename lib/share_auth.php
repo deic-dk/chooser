@@ -94,7 +94,7 @@ class Share extends AbstractBasic {
 		}
 		$this->currentUser = $this->userId;
 		\OC_User::setUserId($this->userId);
-		\OC_Util::setUpFS($this->userId);
+		//\OC_Util::setUpFS($this->userId);
 		\OC_Log::write('chooser','userId: '.$this->userId, \OC_Log::WARN);
 	}
 

@@ -68,12 +68,17 @@ class X509 extends AbstractBasic {
 			$_SERVER['SSL_CLIENT_VERIFY']!='SUCCESS' && $_SERVER['SSL_CLIENT_VERIFY']!='NONE'){
 			return "";
 		}
+		$user = $_SERVER['PHP_AUTH_USER'];
+		$issuerDN = !empty($_SERVER['SSL_CLIENT_I_DN'])?$_SERVER['SSL_CLIENT_I_DN']:
+			(!empty($_SERVER['REDIRECT_SSL_CLIENT_I_DN'])?$_SERVER['REDIRECT_SSL_CLIENT_I_DN']:'');
+		$clientDN = !empty($_SERVER['SSL_CLIENT_S_DN'])?$_SERVER['SSL_CLIENT_S_DN']:
+			(!empty($_SERVER['REDIRECT_SSL_CLIENT_S_DN'])?$_SERVER['REDIRECT_SSL_CLIENT_S_DN']:'');
+		if(empty($clientDN) || empty($issuerDN)){
+			return "";
+		}
 		\OC_Log::write('chooser','Checking cert '.$_SERVER['PHP_AUTH_USER'].':'.
 				$_SERVER['SSL_CLIENT_VERIFY'].':'.$_SERVER['REDIRECT_SSL_CLIENT_I_DN'].':'.
-				$_SERVER['REDIRECT_SSL_CLIENT_S_DN'], \OC_Log::INFO);
-		$user = $_SERVER['PHP_AUTH_USER'];
-		$issuerDN = $_SERVER['REDIRECT_SSL_CLIENT_I_DN'];
-		$clientDN = $_SERVER['REDIRECT_SSL_CLIENT_S_DN'];
+				$_SERVER['REDIRECT_SSL_CLIENT_S_DN'], \OC_Log::WARN);
 		// Check that client DN starts with the issuer DN
 		$issuerCheckStr = preg_replace('|CN=[^,]*,|', '', $issuerDN);
 		if(strpos($clientDN, $issuerCheckStr)==false){

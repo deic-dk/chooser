@@ -43,6 +43,11 @@ OC_App::loadApps(array('filesystem','authentication'));
 
 OCP\App::checkAppEnabled('chooser');
 
+// This may be a browser accessing a webdav URL - and the browser may already be logged in
+if(OC_User::isLoggedIn()){
+	$loggedInUser = \OCP\USER::getUser();
+}
+
 if(OCP\App::isEnabled('user_group_admin')){
 	OC::$CLASSPATH['OC_User_Group_Admin_Backend'] ='apps/user_group_admin/lib/backend.php';
 	OC_Group::useBackend( new OC_User_Group_Admin_Backend() );
@@ -205,4 +210,16 @@ else{
 	$server->httpResponse->sendStatus(403);
 }
 
+// Deal with browsers
+$user_id = \OCP\USER::getUser();
+if(!empty($loggedInUser) && $loggedInUser!=$user_id){
+	\OC_Util::teardownFS();
+	\OC_User::setUserId($loggedInUser);
+	\OC_Util::setupFS($loggedInUser);
+}
+else{
+	session_destroy();
+	$session_id = session_id();
+	unset($_COOKIE[$session_id]);
+}
 
