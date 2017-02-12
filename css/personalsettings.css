@@ -6,3 +6,8 @@
 	vertical-align: top;
 	margin-top: 4px;
 }
+
+.section #allow_internal_dav {
+    vertical-align: 0;
+}
+
