@@ -13,7 +13,7 @@ else{
 	
 	OC_Log::write('chooser','user_id '.$user_id,OC_Log::DEBUG);
 	
-	if($user_id != '' && OC_User::userExists($user_id)){
+	if(!empty($user_id) && OC_User::userExists($user_id)){
 	   $_SESSION['user_id'] = $user_id;
 	   \OC_Util::setupFS();
 	}
