@@ -217,7 +217,7 @@ if(!empty($loggedInUser) && $loggedInUser!=$user_id){
 	\OC_User::setUserId($loggedInUser);
 	\OC_Util::setupFS($loggedInUser);
 }
-else{
+elseif(session_status()===PHP_SESSION_ACTIVE){
 	session_destroy();
 	$session_id = session_id();
 	unset($_COOKIE[$session_id]);
