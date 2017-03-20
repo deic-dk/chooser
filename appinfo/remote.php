@@ -137,9 +137,11 @@ $server->addPlugin(new OC_Connector_Sabre_MaintenancePlugin());
 $server->addPlugin(new OC_Connector_Sabre_ExceptionLoggerPlugin('davs'));
 
 // Accept mod_rewrite internal redirects.
-$_SERVER['REQUEST_URI'] = preg_replace("/^".OC::$WEBROOT."\/remote.php\/webdav/", OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/webdav|",
+		OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 // Accept include by remote.php from files_sharding.
-$_SERVER['REQUEST_URI'] = preg_replace("/^".OC::$WEBROOT."\/remote.php\/davs/", OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/davs|",
+		OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 //$_SERVER['REQUEST_URI'] = preg_replace("/^\/files/", "/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 //OC_Log::write('chooser','REQUEST '.serialize($_SERVER), OC_Log::WARN);
 //OC_Log::write('chooser','user '.$authPlugin->getCurrentUser(), OC_Log::WARN);
@@ -147,6 +149,16 @@ $_SERVER['REQUEST_URI'] = preg_replace("/^".OC::$WEBROOT."\/remote.php\/davs/", 
 if(!empty($_SERVER['BASE_URI'])){
 	// Accept include from remote.php from other apps and set root accordingly
 	$server->setBaseUri($_SERVER['BASE_URI']);
+}
+
+// In the case of a move request, a header will contain the destination
+// with hard-wired host name. Change this host name on redirect.
+if(!empty($_SERVER['HTTP_DESTINATION'])){
+	$_SERVER['HTTP_DESTINATION'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/webdav|",
+			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['HTTP_DESTINATION']);
+	// Accept include by remote.php from files_sharding.
+	$_SERVER['HTTP_DESTINATION'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/davs|",
+			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['HTTP_DESTINATION']);
 }
 
 // wait with registering these until auth is handled and the filesystem is setup
