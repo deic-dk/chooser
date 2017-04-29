@@ -79,7 +79,13 @@ class X509 extends AbstractBasic {
 		\OC_Log::write('chooser','Checking cert '.$_SERVER['PHP_AUTH_USER'].':'.
 				$_SERVER['SSL_CLIENT_VERIFY'].':'.$_SERVER['REDIRECT_SSL_CLIENT_I_DN'].':'.
 				$_SERVER['REDIRECT_SSL_CLIENT_S_DN'], \OC_Log::WARN);
-		// Check that client DN starts with the issuer DN
+		// Check admin access
+		if(!empty($user) && \OC_User::userExists($user) && \OCP\App::isEnabled('files_sharding')){
+			if(\OCA\FilesSharding\Lib::checkCert()){
+				return $user;
+			}
+		}
+		// Check that client DN starts with the issuer DN - very rough spoofing protection
 		$issuerCheckStr = preg_replace('|CN=[^,]*,|', '', $issuerDN);
 		if(strpos($clientDN, $issuerCheckStr)==false){
 			return "";

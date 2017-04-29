@@ -165,7 +165,7 @@ if(!empty($_SERVER['HTTP_DESTINATION'])){
 $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 		
 	if(!empty($_SERVER['BASE_DIR'])){
-		OC_Log::write('files_sharding','Non-files access: '.$_SERVER['BASE_DIR'], OC_Log::WARN);
+		OC_Log::write('chooser','Non-files access: '.$_SERVER['BASE_DIR'], OC_Log::WARN);
 		\OC\Files\Filesystem::tearDown();
 		\OC\Files\Filesystem::init($_SERVER['PHP_AUTH_USER'], $_SERVER['BASE_DIR']);
 		$view = new \OC\Files\View($_SERVER['BASE_DIR']);
@@ -197,11 +197,13 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 require_once('apps/chooser/appinfo/apache_note_user.php');
 
 $ok = true;
-$userServerAccess = \OCA\FilesSharding\Lib::getUserServerAccess();
-// Block all access if account is locked on server
-if(\OCP\App::isEnabled('files_sharding') &&
-		$userServerAccess ==\OCA\FilesSharding\Lib::$USER_ACCESS_NONE){
-	$ok = false;
+if(\OCP\App::isEnabled('files_sharding')){
+	$userServerAccess = \OCA\FilesSharding\Lib::getUserServerAccess();
+	// Block all access if account is locked on server
+	if(\OCP\App::isEnabled('files_sharding') &&
+			$userServerAccess ==\OCA\FilesSharding\Lib::$USER_ACCESS_NONE){
+		$ok = false;
+	}
 }
 
 // Block write operations on r/o server
