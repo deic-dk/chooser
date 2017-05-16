@@ -22,4 +22,8 @@
 			<mydav>appinfo/remote.php</mydav>
 		</public> -->
 		<default_enable/>
+		<types>
+			<prelogin/>
+			<authentication/>
+		</types>
 </info>
