@@ -40,6 +40,19 @@ class OC_Chooser {
         elseif(isset($_SERVER['REMOTE_ADDR']) && strpos($_SERVER['REMOTE_ADDR'], OC_Chooser::ADMIN_NET) === 0){
         	if(isset($_SERVER['PHP_AUTH_USER']) && \OC_User::userExists($_SERVER['PHP_AUTH_USER'])){
         		OC_Log::write('chooser', 'user_id: '.$_SERVER['PHP_AUTH_USER'], OC_Log::DEBUG);
+        		
+        		// Block write operations from backup servers (cmd-line sync client mess-up)
+        		if((strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' || strtolower($_SERVER['REQUEST_METHOD'])=='put' ||
+        				strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
+        				strtolower($_SERVER['REQUEST_METHOD'])=='proppatch') &&
+        				stripos($_SERVER['HTTP_USER_AGENT'], "mirall")!==false &&
+        				stripos($_SERVER['HTTP_USER_AGENT'], "freebsd")!==false){
+        			OC_Log::write('chooser', 'Blocking write request from backup server for '.$_SERVER['PHP_AUTH_USER'],
+        				OC_Log::ERROR);
+							header($_SERVER['SERVER_PROTOCOL'] . ' 403 Forbidden');
+							exit();
+        		}
+        		
         		\OC::$session->set('user_id', $_SERVER['PHP_AUTH_USER']);
         		return $_SERVER['PHP_AUTH_USER'];
         	}

@@ -81,10 +81,10 @@ $server->httpRequest = $requestBackend;
 //$baseuri = OC_App::getAppWebPath('chooser').'appinfo/remote.php';
 $baseuri = OC::$WEBROOT."/remote.php/mydav";
 // Known aliases
-if(strpos($_SERVER['REQUEST_URI'], "/files/")===0){
+if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/files/")===0){
 	$baseuri = OC::$WEBROOT."/files";
 }
-if(strpos($_SERVER['REQUEST_URI'], "/public/")===0){
+if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0){
 	$baseuri = OC::$WEBROOT."/public";
 }
 $server->setBaseUri($baseuri);
@@ -108,7 +108,8 @@ $authBackend = new OC_Connector_Sabre_Auth_NBF();
 $authPlugin = new Sabre\DAV\Auth\Plugin($authBackend, $name);
 $server->addPlugin($authPlugin);
 
-if(strpos($_SERVER['REQUEST_URI'], "/files/")!==0){
+//if(strpos($_SERVER['REQUEST_URI'], "/files/")!==0){
+if($baseuri == OC::$WEBROOT."/public"){
 	//OC_Log::write('chooser','REQUEST '.$_SERVER['REQUEST_URI'], OC_Log::WARN);
 	$authBackendShare = new Sabre\DAV\Auth\Backend\Share($baseuri);
 	$authPluginShare = new Sabre\DAV\Auth\Plugin($authBackendShare, $name);
