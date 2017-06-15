@@ -37,7 +37,7 @@ class Share extends AbstractBasic {
 		$token = preg_replace("/^\/([^\/]*)\/.*$/", "$1", $reqPath);
 		$token = preg_replace("/^\/([^\/]*)$/", "$1", $token);
 		if(empty($token) || $token==$reqPath ||
-				$baseuri != OC::$WEBROOT."/public"){
+				$baseuri != \OC::$WEBROOT."/public"){
 			return false;
 		}
 		if(!\OCP\App::isEnabled('files_sharding') || \OCA\FilesSharding\Lib::isMaster()){
