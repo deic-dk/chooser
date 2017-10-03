@@ -146,7 +146,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 			return false;
 		}
 		// Don't hide Data folders from backup
-		if(strpos($_SERVER['REMOTE_ADDR'], OC_Chooser::ADMIN_NET)===0){
+		if(OC_Chooser::checkTrusted($_SERVER['REMOTE_ADDR'])){
 			return false;
 		}
 		return \OCA\FilesSharding\Lib::inDataFolder($path);
