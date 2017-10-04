@@ -47,7 +47,7 @@ class OC_Chooser {
 	private static function checkUserVlan($remoteIP){
 		self::loadNetValues();
 		foreach(self::$uservlannets as $trustednet){
-			if(!empty($remoteIP) && strpos($remoteIP, $trustednet)===0){
+			if(!empty($remoteIP) && !empty($trustednet) && strpos($remoteIP, $trustednet)===0){
 				return true;
 			}
 		}
