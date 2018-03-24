@@ -136,10 +136,10 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		//if(stripos($_SERVER['HTTP_USER_AGENT'], "cadaver")===false && stripos($_SERVER['HTTP_USER_AGENT'], "curl")===false){
 		if(!isset($_SERVER['HTTP_USER_AGENT'])  || strpos($_SERVER['HTTP_USER_AGENT'], "IP_PASS:")===0 ||
 				stripos($_SERVER['HTTP_USER_AGENT'], "mirall")===false &&
-				stripos($_SERVER['HTTP_USER_AGENT'], "csyncoC")===false &&
+				stripos($_SERVER['HTTP_USER_AGENT'], "csyncoC")===false /*&&
 				stripos($_SERVER['HTTP_USER_AGENT'], "iOs")===false &&
 				stripos($_SERVER['HTTP_USER_AGENT'], "Android-ownCloud")===false &&
-				stripos($_SERVER['HTTP_USER_AGENT'], "ownCloud-android")===false){
+				stripos($_SERVER['HTTP_USER_AGENT'], "ownCloud-android")===false*/){
 			return false;
 		}
 		if(!\OCP\App::isEnabled('files_sharding')){
