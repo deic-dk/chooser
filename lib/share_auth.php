@@ -22,8 +22,8 @@ class Share extends AbstractBasic {
 	
 	private function check_password($owner, $password, $storedPwHash){
 		$forcePortable = (CRYPT_BLOWFISH != 1);
-		$hasher = new PasswordHash(8, $forcePortable);
-		if(!($hasher->CheckPassword($password.OC_Config::getValue('passwordsalt', ''), $storedPwHash))){
+		$hasher = new \PasswordHash(8, $forcePortable);
+		if(!($hasher->CheckPassword($password.\OC_Config::getValue('passwordsalt', ''), $storedPwHash))){
 			return null;
 		}
 		return $owner;
@@ -61,7 +61,7 @@ class Share extends AbstractBasic {
 			}
 			else{
 				$rootLinkItem = \OCA\FilesSharding\Lib::ws('resolveReShare',
-					array('linkItem'=>\OCP\JSON::encode($linkedItem)));
+					array('linkItem'=>\OCP\JSON::encode($linkedItem)), true, true);
 			}
 			if (isset($rootLinkItem['uid_owner'])) {
 				\OCP\JSON::checkUserExists($rootLinkItem['uid_owner']);
