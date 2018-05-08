@@ -107,32 +107,11 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		}
 		return $contentType;
 	}
-	
-	// TODO: get to work with sharding.
-	private function resolveSharedPath($path){
-		//$absPath = $this->tree->getFileView()->getAbsolutePath($path);
-		//$realPath = \OC\Files\Filesystem::resolvePath('/' . $absPath);
-		//if(isset($realPath[0]) && get_class($realPath[0])=='OC\Files\Storage\Shared'){
-		//OC_Log::write('chooser','path: '.$path, OC_Log::WARN);
-		if(preg_match('/^\/*Shared\//',$path)){
-			$sharePath = preg_replace('/^\/*Shared\//', '', $path);
-			if(\OCP\App::isEnabled('files_sharding')){
-				$sourcePath = \OC_Shard_Backend_File::getSource($sharePath);
-			}
-			else{
-				$sourcePath = \OC_Share_Backend_File::getSource($sharePath);
-			}
-			$path = preg_replace('/^\/*files\//', '/', $sourcePath['path']);
-			//OC_Log::write('chooser','path: '.$sharePath.':'.$path, OC_Log::WARN);
-		}
-		return $path;
-	}
 
 	/**
 	* Small helper to hide folders from sync clients.
 	*/
 	private function excludePath($path){
-		$sourcePath = $this->resolveSharedPath($path);
 		//if(stripos($_SERVER['HTTP_USER_AGENT'], "cadaver")===false && stripos($_SERVER['HTTP_USER_AGENT'], "curl")===false){
 		if(!isset($_SERVER['HTTP_USER_AGENT'])  || strpos($_SERVER['HTTP_USER_AGENT'], "IP_PASS:")===0 ||
 				stripos($_SERVER['HTTP_USER_AGENT'], "mirall")===false &&
