@@ -89,6 +89,7 @@ class OC_Chooser {
 				if((strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' || strtolower($_SERVER['REQUEST_METHOD'])=='put' ||
 						strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
 						strtolower($_SERVER['REQUEST_METHOD'])=='proppatch') &&
+						!empty($_SERVER['HTTP_USER_AGENT']) &&
 						stripos($_SERVER['HTTP_USER_AGENT'], "mirall")!==false &&
 						stripos($_SERVER['HTTP_USER_AGENT'], "freebsd")!==false){
 					OC_Log::write('chooser', 'Blocking write request from backup server for '.$_SERVER['PHP_AUTH_USER'],
