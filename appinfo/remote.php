@@ -87,6 +87,11 @@ if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/files/")===0){
 if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0){
 	$baseuri = OC::$WEBROOT."/public";
 }
+if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/group/")===0){
+	$group = preg_replace("|^".OC::$WEBROOT."/group/|", "", $_SERVER['REQUEST_URI']);
+	$group = preg_replace("|/.*$|", "", $group);
+	$baseuri = OC::$WEBROOT."/group/".$group;
+}
 $server->setBaseUri($baseuri);
 
 // Auth backends
@@ -164,14 +169,26 @@ if(!empty($_SERVER['HTTP_DESTINATION'])){
 
 // wait with registering these until auth is handled and the filesystem is setup
 $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
-		
+	
+	if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/group/")===0){
+		$group = preg_replace("|^".OC::$WEBROOT."/group/|", "", $_SERVER['REQUEST_URI']);
+		$group = preg_replace("|/.*$|", "", $group);
+		$group = urldecode($group);
+		if(!empty($group)){
+			\OC\Files\Filesystem::tearDown();
+			$groupDir = '/'.$_SERVER['PHP_AUTH_USER'].'/user_group_admin/'.$group;
+			\OC\Files\Filesystem::init($_SERVER['PHP_AUTH_USER'], $groupDir);
+			$view = new \OC\Files\View($groupDir);
+			OC_Log::write('chooser','Group dir access: '.$groupDir.':'.$view->getRoot().':'.\OCP\USER::getUser(), OC_Log::WARN);
+		}
+	}
 	if(!empty($_SERVER['BASE_DIR'])){
 		OC_Log::write('chooser','Non-files access: '.$_SERVER['BASE_DIR'], OC_Log::WARN);
 		\OC\Files\Filesystem::tearDown();
 		\OC\Files\Filesystem::init($_SERVER['PHP_AUTH_USER'], $_SERVER['BASE_DIR']);
 		$view = new \OC\Files\View($_SERVER['BASE_DIR']);
 	}
-	else{
+	elseif(empty($group)){
 		$view = \OC\Files\Filesystem::getView();
 	}
 	$rootInfo = $view->getFileInfo('');
