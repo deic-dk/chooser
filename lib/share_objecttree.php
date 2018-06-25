@@ -33,7 +33,12 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 		if (!strlen($path)) {
 			return $this->rootNode;
 		}
-
+		
+		if($path=='sharingin'){
+			OC_Log::write('chooser','Generating sharingin targets, '.$path, OC_Log::WARN);
+			
+		}
+		
 		if (pathinfo($path, PATHINFO_EXTENSION) === 'part') {
 			// read from storage
 			$absPath = $this->fileView->getAbsolutePath($path);

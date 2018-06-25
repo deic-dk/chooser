@@ -84,10 +84,13 @@ $baseuri = OC::$WEBROOT."/remote.php/mydav";
 if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/files/")===0){
 	$baseuri = OC::$WEBROOT."/files";
 }
-if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0){
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0){
 	$baseuri = OC::$WEBROOT."/public";
 }
-if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/group/")===0){
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/")===0){
+	$baseuri = OC::$WEBROOT."/sharingin";
+}
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/group/")===0){
 	$group = preg_replace("|^".OC::$WEBROOT."/group/|", "", $_SERVER['REQUEST_URI']);
 	$group = preg_replace("|/.*$|", "", $group);
 	$baseuri = OC::$WEBROOT."/group/".$group;
@@ -127,6 +130,9 @@ if($baseuri == OC::$WEBROOT."/public"){
 		$objectTree->auth_path = $authBackendShare->path;
 		$objectTree->allowUpload = $authBackendShare->allowUpload;
 	}
+}
+elseif($baseuri == OC::$WEBROOT."/sharingin"){
+	$objectTree->allowUpload = false;
 }
 
 // Also make sure there is a 'data' directory, writable by the server. This directory is used to store information about locks
@@ -170,18 +176,6 @@ if(!empty($_SERVER['HTTP_DESTINATION'])){
 // wait with registering these until auth is handled and the filesystem is setup
 $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 	
-	if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/group/")===0){
-		$group = preg_replace("|^".OC::$WEBROOT."/group/|", "", $_SERVER['REQUEST_URI']);
-		$group = preg_replace("|/.*$|", "", $group);
-		$group = urldecode($group);
-		if(!empty($group)){
-			\OC\Files\Filesystem::tearDown();
-			$groupDir = '/'.$_SERVER['PHP_AUTH_USER'].'/user_group_admin/'.$group;
-			\OC\Files\Filesystem::init($_SERVER['PHP_AUTH_USER'], $groupDir);
-			$view = new \OC\Files\View($groupDir);
-			OC_Log::write('chooser','Group dir access: '.$groupDir.':'.$view->getRoot().':'.\OCP\USER::getUser(), OC_Log::WARN);
-		}
-	}
 	if(!empty($_SERVER['BASE_DIR'])){
 		OC_Log::write('chooser','Non-files access: '.$_SERVER['BASE_DIR'], OC_Log::WARN);
 		\OC\Files\Filesystem::tearDown();
