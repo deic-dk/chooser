@@ -163,6 +163,8 @@ if(!empty($_SERVER['BASE_URI'])){
 	$server->setBaseUri($_SERVER['BASE_URI']);
 }
 
+OC_Log::write('chooser','BASE URI: '.$baseuri, OC_Log::INFO);
+
 // In the case of a move request, a header will contain the destination
 // with hard-wired host name. Change this host name on redirect.
 if(!empty($_SERVER['HTTP_DESTINATION'])){
@@ -182,7 +184,7 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 		\OC\Files\Filesystem::init($_SERVER['PHP_AUTH_USER'], $_SERVER['BASE_DIR']);
 		$view = new \OC\Files\View($_SERVER['BASE_DIR']);
 	}
-	elseif(empty($group)){
+	else{
 		$view = \OC\Files\Filesystem::getView();
 	}
 	$rootInfo = $view->getFileInfo('');
