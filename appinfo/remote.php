@@ -90,6 +90,9 @@ elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0){
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/")===0){
 	$baseuri = OC::$WEBROOT."/sharingin";
 }
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingout/")===0){
+	$baseuri = OC::$WEBROOT."/sharingout";
+}
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/group/")===0){
 	$group = preg_replace("|^".OC::$WEBROOT."/group/|", "", $_SERVER['REQUEST_URI']);
 	$group = preg_replace("|/.*$|", "", $group);
@@ -132,9 +135,13 @@ if($baseuri == OC::$WEBROOT."/public"){
 	}
 }
 elseif($baseuri == OC::$WEBROOT."/sharingin"){
+	$objectTree->sharingIn = true;
 	$objectTree->allowUpload = false;
 }
-
+elseif($baseuri == OC::$WEBROOT."/sharingout"){
+	$objectTree->sharingOut = true;
+	$objectTree->allowUpload = false;
+}
 // Also make sure there is a 'data' directory, writable by the server. This directory is used to store information about locks
 $lockBackend = new OC_Connector_Sabre_Locks();
 $lockPlugin = new Sabre\DAV\Locks\Plugin($lockBackend);
@@ -178,21 +185,33 @@ if(!empty($_SERVER['HTTP_DESTINATION'])){
 // wait with registering these until auth is handled and the filesystem is setup
 $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 	
-	if(!empty($_SERVER['BASE_DIR'])){
-		OC_Log::write('chooser','Non-files access: '.$_SERVER['BASE_DIR'], OC_Log::WARN);
-		\OC\Files\Filesystem::tearDown();
-		\OC\Files\Filesystem::init($_SERVER['PHP_AUTH_USER'], $_SERVER['BASE_DIR']);
-		$view = new \OC\Files\View($_SERVER['BASE_DIR']);
+	$rootDir = null;
+	$view = null;
+	$mountManager = null;
+	if(!empty($objectTree->sharingIn) && $objectTree->sharingIn){
+		$objectTree->sharingInInit();
+	}
+	elseif(!empty($objectTree->sharingOut) && $objectTree->sharingOut){
+		$objectTree->sharingOutInit();
 	}
 	else{
-		$view = \OC\Files\Filesystem::getView();
+		if(!empty($_SERVER['BASE_DIR'])){
+			OC_Log::write('chooser','Non-files access: '.$_SERVER['BASE_DIR'], OC_Log::WARN);
+			\OC\Files\Filesystem::tearDown();
+			\OC\Files\Filesystem::init($_SERVER['PHP_AUTH_USER'], $_SERVER['BASE_DIR']);
+			$view = new \OC\Files\View($_SERVER['BASE_DIR']);
+		}
+		else{
+			$view = \OC\Files\Filesystem::getView();
+		}
+		$rootInfo = $view->getFileInfo('');
+		
+		// Create ownCloud Dir
+		$mountManager = \OC\Files\Filesystem::getMountManager();
+		$rootDir = new OC_Connector_Sabre_Directory($view, $rootInfo);
+		$objectTree->init($rootDir, $view, $mountManager);
 	}
-	$rootInfo = $view->getFileInfo('');
-	
-	// Create ownCloud Dir
-	$mountManager = \OC\Files\Filesystem::getMountManager();
-	$rootDir = new OC_Connector_Sabre_Directory($view, $rootInfo);
-	$objectTree->init($rootDir, $view, $mountManager);
+
 
 	// This was to bump up quota if smaller than freequota WITHOUT
 	// writing the bigger quota to the DB.

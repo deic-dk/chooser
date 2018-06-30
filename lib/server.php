@@ -58,7 +58,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		
 		//OC_Log::write('chooser','uri: '.$uri, OC_Log::WARN);
 
-		$newProperties = $this->getPropertiesForPath($uri,$requestedProperties,$depth);
+		$newProperties = $this->getPropertiesForPath($uri, $requestedProperties, $depth);
 
 		// This is a multi-status response
 		$this->httpResponse->sendStatus(207);
@@ -151,7 +151,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		if ($depth==1 && $parentNode instanceof \Sabre\DAV\ICollection) {
 			$children = $this->tree->getChildren($path);
 			foreach($children as $childNode){
-				//OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName(), OC_Log::WARN);
+				OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName(), OC_Log::WARN);
 				if($this->excludePath($path . '/' . $childNode->getName())){
 					continue;
 				}
@@ -201,7 +201,12 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 				$removeRT = true;
 			}
 
-			$result = $this->broadcastEvent('beforeGetProperties',array($myPath, $node, &$currentPropertyNames, &$newProperties));
+			if($node instanceof \OC_Connector_Sabre_Sharingin_Directory){
+				$result = true;
+			}
+			else{
+				$result = $this->broadcastEvent('beforeGetProperties',array($myPath, $node, &$currentPropertyNames, &$newProperties));
+			}
 			// If this method explicitly returned false, we must ignore this
 			// node as it is inaccessible.
 			if ($result===false) continue;
@@ -277,7 +282,12 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 
 			}
 
-			$this->broadcastEvent('afterGetProperties',array(trim($myPath,'/'),&$newProperties, $node));
+			if($node instanceof \OC_Connector_Sabre_Sharingin_Directory){
+				$result = true;
+			}
+			else{
+				$this->broadcastEvent('afterGetProperties',array(trim($myPath,'/'),&$newProperties, $node));
+			}
 
 			$newProperties['href'] = trim($myPath,'/');
 

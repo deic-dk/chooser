@@ -46,5 +46,28 @@ class OC_Connector_Sabre_Auth_NBF extends OC_Connector_Sabre_Auth {
 	public function checkUserPass($username, $password) {
 		return $this->validateUserPass($username, $password);
 	}
+	
+	public function authenticate(\Sabre\DAV\Server $server, $realm) {
+		
+		$result = $this->auth($server, $realm);
+		
+		// close the session - right after authentication there is not need to write to the session any more
+		// Well, we do need just that.
+		//\OC::$session->close();
+		
+		return $result;
+	}
+	
+	private function auth(\Sabre\DAV\Server $server, $realm) {
+		if (OC_User::handleApacheAuth() || OC_User::isLoggedIn()) {
+			$user = OC_User::getUser();
+			OC_Util::setupFS($user);
+			$this->currentUser = $user;
+			return true;
+		}
+		
+		$parentsParent = class_parents($this)[1];
+		return $parentsParent->authenticate($server, $realm);
+	}
 
 } 
