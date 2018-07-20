@@ -18,7 +18,9 @@ class Share extends AbstractBasic {
 	public $allowUpload = false;
 	public $path = null;
 	public $token = null;
-
+	private $sharingOut = false;
+	private $sharingOutAuthenticated = false;
+	
 	
 	private function check_password($owner, $password, $storedPwHash){
 		$forcePortable = (CRYPT_BLOWFISH != 1);
@@ -36,10 +38,50 @@ class Share extends AbstractBasic {
 		$reqPath = \OC\Files\Filesystem::normalizePath($reqPath);
 		$token = preg_replace("/^\/([^\/]*)\/.*$/", "$1", $reqPath);
 		$token = preg_replace("/^\/([^\/]*)$/", "$1", $token);
-		if(empty($token) || $token==$reqPath ||
-				$baseuri != \OC::$WEBROOT."/public"){
+		if(!empty($token) && $token!=$reqPath && $baseuri==\OC::$WEBROOT."/public"){
+			return $this->setupFromToken($token);
+		}
+		elseif($baseuri==\OC::$WEBROOT."/sharingout"){
+			$this->sharingOut = true;
+			return $this->setupSharingout($reqPath);
+		}
+		return false;
+	}
+	
+	private function setupSharingout($reqPath){
+		$checkOwner = preg_replace('|^/([^/]+)/*.*|', '$1', $reqPath);
+		if(strpos($checkOwner, '/')!==false || $checkOwner==$reqPath || empty($_SERVER['PHP_AUTH_USER'])){
 			return false;
 		}
+		if(\OCA\FilesSharding\Lib::onServerForUser($_SERVER['PHP_AUTH_USER'])){
+			\OC_User::setUserId($_SERVER['PHP_AUTH_USER']);
+			\OC_Util::setUpFS($_SERVER['PHP_AUTH_USER']);
+			$shares = \OCA\Files\Share_files_sharding\Api::getFilesSharedWithMe();
+			$sharesData = $shares->getData();
+		}
+		else{
+			$sharesData = \OCA\FilesSharding\Lib::ws('getItemsSharedWith', array('user_id' => $_SERVER['PHP_AUTH_USER'],
+					'itemType' => 'file'));
+		}
+		foreach($sharesData as $share) {
+			if($share['uid_owner']==$checkOwner){
+				$this->userId = $share['uid_owner'];
+				$this->sharingOutAuthenticated = true;
+				\OCP\Util::writeLog('chooser', 'User OK: '. $checkOwner.': '.$_SERVER['PHP_AUTH_USER'], \OC_Log::WARN);
+				break;
+			}
+		}
+		if($this->userId!=null && trim($this->userId)!==''){
+			if(\OC_Appconfig::getValue('core', 'shareapi_allow_public_upload', 'yes')==='yes'){
+				\OC_Log::write('chooser','Permissions: '.$share['permissions'], \OC_Log::WARN);
+				$this->allowUpload = (bool) ($share['permissions'] & \OCP\PERMISSION_CREATE);
+			}
+		}
+		$this->currentUser = $this->userId;
+		\OC_User::setUserId($this->userId);
+	}
+	
+	private function setupFromToken($token){
 		if(!\OCP\App::isEnabled('files_sharding') || \OCA\FilesSharding\Lib::isMaster()){
 			$linkedItem = \OCP\Share::getShareByToken($token, false);
 		}
@@ -49,7 +91,6 @@ class Share extends AbstractBasic {
 		if(empty($linkedItem)){
 			return false;
 		}
-		
 		\OCP\Util::writeLog('chooser', 'Got share by token: '. $token . '-->' . serialize($linkedItem), \OC_Log::WARN);
 		if (isset($linkedItem) && is_array($linkedItem) && isset($linkedItem['uid_owner'])) {
 			// seems to be a valid share
@@ -97,6 +138,7 @@ class Share extends AbstractBasic {
 		\OC_User::setUserId($this->userId);
 		//\OC_Util::setUpFS($this->userId);
 		\OC_Log::write('chooser','userId: '.$this->userId, \OC_Log::WARN);
+		return true;
 	}
 
 	/**
@@ -109,7 +151,11 @@ class Share extends AbstractBasic {
 	 */
 	protected function validateUserPass($username, $password) {
 		\OC_Log::write('chooser','Validating: '.$this->userId, \OC_Log::WARN);
-		if($this->userId != '' && \OC_User::userExists($this->userId)){
+		if($this->sharingOut && $this->sharingOutAuthenticated){
+			\OC_Util::tearDownFS();
+			\OC_User::setUserId($_SERVER['PHP_AUTH_USER']);
+		}
+		elseif(!empty($this->userId) && \OC_User::userExists($this->userId)){
 			$this->currentUser = $this->userId;
 			\OC_User::setUserId($this->userId);
 			\OC_Util::setUpFS($this->userId);
@@ -122,7 +168,11 @@ class Share extends AbstractBasic {
 
 	public function authenticate(\Sabre\DAV\Server $server, $realm) {
 		\OC_Log::write('chooser','Authenticating: '.$this->userId, \OC_Log::INFO);
-		if($this->userId != '' && \OC_User::userExists($this->userId)){
+		if($this->sharingOut && $this->sharingOutAuthenticated){
+			\OC_Util::tearDownFS();
+			\OC_User::setUserId($_SERVER['PHP_AUTH_USER']);
+		}
+		elseif(!empty($this->userId) && \OC_User::userExists($this->userId)){
 			$this->currentUser = $this->userId;
 			//\OC_User::setUserId($this->userId);
 			\OC_Util::setUpFS($this->userId);

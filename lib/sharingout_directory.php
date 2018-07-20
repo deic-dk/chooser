@@ -43,6 +43,7 @@ class OC_Connector_Sabre_Sharingout_Directory extends OC_Connector_Sabre_Node
 		}
 		$this->fileView = new OC_Remote_View();
 		if ($info['mimetype'] == 'httpd/unix-directory') {
+			\OC_Log::write('chooser','Returning OC_Connector_Sabre_Directory '.$name.':'.$info['fileid'], \OC_Log::WARN);
 			$node = new OC_Connector_Sabre_Directory($this->fileView, $info);
 		} else {
 			$node = new OC_Connector_Sabre_File($this->fileView, $info);
@@ -71,7 +72,7 @@ class OC_Connector_Sabre_Sharingout_Directory extends OC_Connector_Sabre_Node
 				}
 				$owners[] = $share['uid_owner'];
 				$info = new \OC\Files\FileInfo($share['uid_owner'], \OC\Files\Filesystem::getStorage('/'.$share['uid_owner'].'/'),
-						$share['uid_owner'], array('fileid'=>$share['uid_owner']));
+						$share['uid_owner'], array('fileid'=>-1));
 				OC_Log::write('chooser','Getting child '.$share['uid_owner'], OC_Log::WARN);
 				$node = $this->getChild($share['uid_owner'], $info);
 			}
@@ -83,10 +84,16 @@ class OC_Connector_Sabre_Sharingout_Directory extends OC_Connector_Sabre_Node
 				$group = '';
 				if(!empty($share['path']) && preg_match("|^/*user_group_admin/|", $share['path'])){
 					$group = preg_replace("|^/*user_group_admin/([^/]+)/.*|", "$1", $share['path']);
+					$path = $share['path'];
 				}
-				$info = \OCA\FilesSharding\Lib::getFileInfo($share['path'], $share['uid_owner'], $share['item_source'], '',
+				else{
+					$path = $share['path'];
+				}
+				$info = \OCA\FilesSharding\Lib::getFileInfo($path, $share['uid_owner'], $share['item_source'], '',
 						$user, $group);
-				\OC_Log::write('chooser','Got info, '.$info['fileid'], \OC_Log::WARN);
+				\OC_Log::write('chooser','Got info, '.$user.':'.$info['fileid'], \OC_Log::WARN);
+				\OC\Files\Filesystem::init($share['uid_owner'],
+						!empty($group)?'/'.$share['uid_owner'].'/user_group_admin/'.$group:'/'.$share['uid_owner'].'/files');
 				$node = $this->getChild($this->path.'/'.$info->getName(), $info);
 			}
 			$nodes[] = $node;

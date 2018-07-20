@@ -120,7 +120,7 @@ $authPlugin = new Sabre\DAV\Auth\Plugin($authBackend, $name);
 $server->addPlugin($authPlugin);
 
 //if(strpos($_SERVER['REQUEST_URI'], "/files/")!==0){
-if($baseuri == OC::$WEBROOT."/public"){
+if($baseuri == OC::$WEBROOT."/public" || $baseuri == OC::$WEBROOT."/sharingout"){
 	//OC_Log::write('chooser','REQUEST '.$_SERVER['REQUEST_URI'], OC_Log::WARN);
 	$authBackendShare = new Sabre\DAV\Auth\Backend\Share($baseuri);
 	$authPluginShare = new Sabre\DAV\Auth\Plugin($authBackendShare, $name);
@@ -131,16 +131,15 @@ if($baseuri == OC::$WEBROOT."/public"){
 		//$server->setBaseUri($baseuri."/".$authBackendShare->token);
 		$objectTree->auth_token = $authBackendShare->token;
 		$objectTree->auth_path = $authBackendShare->path;
-		$objectTree->allowUpload = $authBackendShare->allowUpload;
 	}
+	$objectTree->allowUpload = $authBackendShare->allowUpload;
 }
-elseif($baseuri == OC::$WEBROOT."/sharingin"){
+if($baseuri == OC::$WEBROOT."/sharingin"){
 	$objectTree->sharingIn = true;
 	$objectTree->allowUpload = false;
 }
 elseif($baseuri == OC::$WEBROOT."/sharingout"){
 	$objectTree->sharingOut = true;
-	$objectTree->allowUpload = false;
 }
 // Also make sure there is a 'data' directory, writable by the server. This directory is used to store information about locks
 $lockBackend = new OC_Connector_Sabre_Locks();
@@ -192,6 +191,7 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 		$objectTree->sharingInInit();
 	}
 	elseif(!empty($objectTree->sharingOut) && $objectTree->sharingOut){
+		//OC_Hook::clear('OC_Filesystem', 'post_write');
 		$objectTree->sharingOutInit();
 	}
 	else{
@@ -210,21 +210,20 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 		$mountManager = \OC\Files\Filesystem::getMountManager();
 		$rootDir = new OC_Connector_Sabre_Directory($view, $rootInfo);
 		$objectTree->init($rootDir, $view, $mountManager);
+		
+		// This was to bump up quota if smaller than freequota WITHOUT
+		// writing the bigger quota to the DB.
+		// Unfortunately it only works for the initial size check.
+		// When actually writing, fopen is wrapped with \OC\Files\Stream\Quota::wrap,
+		// and the DB quota is checked again.
+		/*if(\OCP\App::isEnabled('files_accounting')){
+			require_once 'files_accounting/lib/quotaplugin.php';
+			$server->addPlugin(new OC_Connector_Sabre_QuotaPlugin_files_accounting($view));
+		}
+		else{*/
+			$server->addPlugin(new OC_Connector_Sabre_QuotaPlugin($view));
+		//}
 	}
-
-
-	// This was to bump up quota if smaller than freequota WITHOUT
-	// writing the bigger quota to the DB.
-	// Unfortunately it only works for the initial size check.
-	// When actually writing, fopen is wrapped with \OC\Files\Stream\Quota::wrap,
-	// and the DB quota is checked again.
-	/*if(\OCP\App::isEnabled('files_accounting')){
-		require_once 'files_accounting/lib/quotaplugin.php';
-		$server->addPlugin(new OC_Connector_Sabre_QuotaPlugin_files_accounting($view));
-	}
-	else{*/
-		$server->addPlugin(new OC_Connector_Sabre_QuotaPlugin($view));
-	//}
 }, 30); // priority 30: after auth (10) and acl(20), before lock(50) and handling the request
 
 require_once('apps/chooser/appinfo/apache_note_user.php');

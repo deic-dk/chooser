@@ -151,7 +151,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		if ($depth==1 && $parentNode instanceof \Sabre\DAV\ICollection) {
 			$children = $this->tree->getChildren($path);
 			foreach($children as $childNode){
-				OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName(), OC_Log::WARN);
+				OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName().":".$this->tree->sharingIn, OC_Log::WARN);
 				if($this->excludePath($path . '/' . $childNode->getName())){
 					continue;
 				}
@@ -201,7 +201,8 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 				$removeRT = true;
 			}
 
-			if($node instanceof \OC_Connector_Sabre_Sharingin_Directory){
+			if($node instanceof \OC_Connector_Sabre_Sharingin_Directory ||
+				$node instanceof \OC_Connector_Sabre_Sharingout_Directory){
 				$result = true;
 			}
 			else{
@@ -282,7 +283,8 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 
 			}
 
-			if($node instanceof \OC_Connector_Sabre_Sharingin_Directory){
+			if($node instanceof \OC_Connector_Sabre_Sharingin_Directory ||
+					$node instanceof \OC_Connector_Sabre_Sharingout_Directory){
 				$result = true;
 			}
 			else{
