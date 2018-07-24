@@ -67,7 +67,7 @@ class OC_Connector_Sabre_Auth_NBF extends OC_Connector_Sabre_Auth {
 		}
 		
 		$parentsParent = class_parents($this)[1];
-		return $parentsParent->authenticate($server, $realm);
+		return empty($parentsParent)?false:$parentsParent->authenticate($server, $realm);
 	}
 
 } 

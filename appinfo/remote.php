@@ -204,6 +204,10 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 		else{
 			$view = \OC\Files\Filesystem::getView();
 		}
+		if(empty($view)){
+			$server->httpResponse->sendStatus(403);
+			exit;
+		}
 		$rootInfo = $view->getFileInfo('');
 		
 		// Create ownCloud Dir
