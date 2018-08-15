@@ -180,7 +180,12 @@ if(!empty($_SERVER['HTTP_DESTINATION'])){
 	$_SERVER['HTTP_DESTINATION'] = preg_replace("|^(https*://[^/]+)".OC::$WEBROOT."/*remote.php/davs|",
 			"$1".OC::$WEBROOT."/remote.php/mydav/", $_SERVER['HTTP_DESTINATION']);
 	OC_Log::write('chooser','DESTINATION: '.$_SERVER['HTTP_DESTINATION'], OC_Log::WARN);
-}
+	$_SERVER['HTTP_DESTINATION'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/webdav|",
+			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['HTTP_DESTINATION']);
+	// Accept include by remote.php from files_sharding.
+	$_SERVER['HTTP_DESTINATION'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/davs|",
+			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['HTTP_DESTINATION']);
+	OC_Log::write('chooser','DESTINATION: '.$_SERVER['HTTP_DESTINATION'], OC_Log::WARN);}
 
 // wait with registering these until auth is handled and the filesystem is setup
 $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
