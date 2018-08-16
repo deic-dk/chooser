@@ -65,9 +65,7 @@ class OC_Connector_Sabre_Auth_NBF extends OC_Connector_Sabre_Auth {
 			$this->currentUser = $user;
 			return true;
 		}
-		
-		$parentsParent = class_parents($this)[1];
-		return empty($parentsParent)?false:$parentsParent->authenticate($server, $realm);
+		return \Sabre\DAV\Auth\Backend\AbstractBasic::authenticate($server, $realm);
 	}
 
 } 
