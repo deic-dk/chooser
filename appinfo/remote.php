@@ -92,6 +92,11 @@ elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/")===0){
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingout/")===0){
 	$baseuri = OC::$WEBROOT."/sharingout";
+	if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingout/@@/")===0){
+		$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/sharingout/\@\@/|",
+				OC::$WEBROOT."/sharingout/", $_SERVER['REQUEST_URI']);
+		$objectTree->sharingInOut = true;
+	}
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/group/")===0){
 	$group = preg_replace("|^".OC::$WEBROOT."/group/|", "", $_SERVER['REQUEST_URI']);

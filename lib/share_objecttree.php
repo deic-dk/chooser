@@ -10,6 +10,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	public $auth_path = null;
 	public $sharingIn = false;
 	public $sharingOut = false;
+	public $sharingInOut = false;
 	
 	public function fixPath(&$path){
 		if($this->auth_token!=null && $this->auth_path!=null){
@@ -84,13 +85,18 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 					$sharepath = $share['path'];
 				}
 				$filepath = preg_replace('|^'.$share['uid_owner'].'/|', '', $path);
-				if(basename($share['path'])==basename($path)){
+				if($path==$share['uid_owner'].'/'.$share['path'] ||
+						strpos($path, $share['uid_owner'].'/'.$share['path'].'/')==0){
 					$info = \OCA\FilesSharding\Lib::getFileInfo($filepath, $share['uid_owner'], $share['item_source'], '',
 							$user, $group);
 					$server = \OCA\FilesSharding\Lib::getServerForUser($share['uid_owner'], false);
 					$master = \OCA\FilesSharding\Lib::getMasterURL();
 					$path = implode('/', array_map('rawurlencode', explode('/', ltrim($path, '/'))));
-					$redirect = rtrim((empty($server)?$master:$server), '/').'/sharingout/'.$path;
+					// This hack is to avoid that e.g. cyberduck shows the directory itself in the list of subdirectories.
+					// Which happens when listing e.g. /sharingin/test/ and then being redirected to
+					// /sharingout/test/.
+					// On the redirected end the @@ is stripped off and sharingout replaced with sharingin.
+					$redirect = rtrim((empty($server)?$master:$server), '/').'/sharingout/@@/'.$path;
 					OC_Log::write('chooser','Redirecting sharingin target '.$path.' to '.$share['uid_owner'].'-->'.$redirect, OC_Log::WARN);
 					\OC_Response::redirect($redirect);
 					exit();
