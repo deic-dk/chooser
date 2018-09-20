@@ -77,6 +77,8 @@ $server = new OC_Connector_Sabre_Server_chooser($objectTree);
 $requestBackend = new OC_Connector_Sabre_Request();
 $server->httpRequest = $requestBackend;
 
+$favoriteLink = false;
+
 // Path
 //$baseuri = OC_App::getAppWebPath('chooser').'appinfo/remote.php';
 $baseuri = OC::$WEBROOT."/remote.php/mydav";
@@ -87,8 +89,24 @@ if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/files/")===0){
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0){
 	$baseuri = OC::$WEBROOT."/public";
 }
+// TODO: more thorough check. Currently the favorite call from iOS
+// seems to be the only one using REPORT. We can't rely on that in the future.
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".$_SERVER['PHP_AUTH_USER']."/")===0 &&
+		strtolower($_SERVER['REQUEST_METHOD'])=='report'){
+	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$_SERVER['PHP_AUTH_USER'];
+	$objectTree->favorites = true;
+}
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/")===0){
 	$baseuri = OC::$WEBROOT."/sharingin";
+	$objectTree->sharingIn = true;
+	$objectTree->allowUpload = false;
+}
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
+				$_SERVER['PHP_AUTH_USER']."/@@/sharingin/")===0){
+		$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$_SERVER['PHP_AUTH_USER']."/@@/sharingin";
+		$objectTree->sharingIn = true;
+		$objectTree->allowUpload = false;
+		$favoriteLink = true;
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingout/")===0){
 	$baseuri = OC::$WEBROOT."/sharingout";
@@ -97,11 +115,23 @@ elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingout/")===0){
 				OC::$WEBROOT."/sharingout/", $_SERVER['REQUEST_URI']);
 		$objectTree->sharingInOut = true;
 	}
+	$objectTree->sharingOut = true;
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/group/")===0){
 	$group = preg_replace("|^".OC::$WEBROOT."/group/|", "", $_SERVER['REQUEST_URI']);
 	$group = preg_replace("|/.*$|", "", $group);
-	$baseuri = OC::$WEBROOT."/group/".$group;
+	// Ignored as empty($_SERVER['BASE_URI'] is set by user_group_admin
+	$baseuri = OC::$WEBROOT."/group/";
+	$_SERVER['BASE_DIR'] = '/'.$_SERVER['PHP_AUTH_USER'].'/user_group_admin/';
+}
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
+		$_SERVER['PHP_AUTH_USER']."/@@/group/")===0){
+	$group = preg_replace("|^".OC::$WEBROOT."/remote.php/dav/files/".
+			$_SERVER['PHP_AUTH_USER']."/\@\@/group/|", "", $_SERVER['REQUEST_URI']);
+	$group = preg_replace("|/.*$|", "", $group);
+	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$_SERVER['PHP_AUTH_USER']."/@@/group/".$group;
+	$_SERVER['BASE_DIR'] = '/'.$_SERVER['PHP_AUTH_USER'].'/user_group_admin/'.$group;
+	$favoriteLink = true;
 }
 $server->setBaseUri($baseuri);
 
@@ -139,13 +169,7 @@ if($baseuri == OC::$WEBROOT."/public" || $baseuri == OC::$WEBROOT."/sharingout")
 	}
 	$objectTree->allowUpload = $authBackendShare->allowUpload;
 }
-if($baseuri == OC::$WEBROOT."/sharingin"){
-	$objectTree->sharingIn = true;
-	$objectTree->allowUpload = false;
-}
-elseif($baseuri == OC::$WEBROOT."/sharingout"){
-	$objectTree->sharingOut = true;
-}
+
 // Also make sure there is a 'data' directory, writable by the server. This directory is used to store information about locks
 $lockBackend = new OC_Connector_Sabre_Locks();
 $lockPlugin = new Sabre\DAV\Locks\Plugin($lockBackend);
@@ -153,6 +177,7 @@ $server->addPlugin($lockPlugin);
 
 $server->addPlugin(new \Sabre\DAV\Browser\Plugin(false)); // Show something in the Browser, but no upload
 
+$server->xmlNamespaces[\OC_Connector_Sabre_Server_chooser::NS_NEXTCLOUD] = 'nc';
 $server->addPlugin(new OC_Connector_Sabre_FilesPlugin());
 //$server->addPlugin(new OC_Connector_Sabre_AbortedUploadDetectionPlugin());
 
@@ -160,8 +185,15 @@ $server->addPlugin(new OC_Connector_Sabre_MaintenancePlugin());
 $server->addPlugin(new OC_Connector_Sabre_ExceptionLoggerPlugin('davs'));
 
 // Accept mod_rewrite internal redirects.
-$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/webdav|",
-		OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+if(!$favoriteLink && empty($objectTree->favorites)){
+	$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/webdav|",
+			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+	$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/dav/files/".
+			$authPlugin->getCurrentUser()."|", OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+	$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/dav|",
+			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+}
+
 // Accept include by remote.php from files_sharding.
 $_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/davs|",
 		OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
@@ -205,9 +237,14 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 		//OC_Hook::clear('OC_Filesystem', 'post_write');
 		$objectTree->sharingOutInit();
 	}
+	elseif(!empty($objectTree->favorites) && $objectTree->favorites){
+		//OC_Hook::clear('OC_Filesystem', 'post_write');
+		$objectTree->favoritesInit();
+	}
 	else{
 		if(!empty($_SERVER['BASE_DIR'])){
-			OC_Log::write('chooser','Non-files access: '.$_SERVER['BASE_DIR'], OC_Log::WARN);
+			OC_Log::write('chooser','Non-files access: '.$_SERVER['REQUEST_URI'].
+					'-->'.$_SERVER['BASE_DIR'], OC_Log::WARN);
 			\OC\Files\Filesystem::tearDown();
 			\OC\Files\Filesystem::init($_SERVER['PHP_AUTH_USER'], $_SERVER['BASE_DIR']);
 			$view = new \OC\Files\View($_SERVER['BASE_DIR']);

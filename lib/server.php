@@ -32,16 +32,94 @@
  *
  */
 class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
-
+	
+	const NS_NEXTCLOUD = 'http://nextcloud.org/ns';
+	
+	public function invokeMethod($method, $uri) {
+		
+		$method = strtoupper($method);
+		
+		if (!$this->broadcastEvent('beforeMethod',array($method, $uri))) return;
+		
+		// Make sure this is a HTTP method we support
+		$internalMethods = array(
+				'OPTIONS',
+				'GET',
+				'HEAD',
+				'DELETE',
+				'PROPFIND',
+				'MKCOL',
+				'PUT',
+				'PROPPATCH',
+				'COPY',
+				'MOVE',
+				'REPORT',
+				'SEARCH'
+		);
+		
+		if (in_array($method,$internalMethods)) {
+			
+			call_user_func(array($this,'http' . $method), $uri);
+			
+		} else {
+			
+			if ($this->broadcastEvent('unknownMethod',array($method, $uri))) {
+				// Unsupported method
+				throw new Exception\NotImplemented('There was no handler found for this "' . $method . '" method');
+			}
+			
+		}
+		
+	}
+	
+	private $mediaSearch = false;
+	// This is only for the media search called by the iPhone app.
+	protected function httpSearch($uri) {
+		$this->mediaSearch = true;
+		$xml = $this->httpRequest->getBody(true);
+		OC_Log::write('chooser','XML: '.$xml, OC_Log::WARN);
+		$xml = preg_replace('/&(?!#?[a-z0-9]+;)/', '&amp;', $xml);
+		$parsed = simplexml_load_string($xml);
+		$parsed = dom_import_simplexml($parsed);
+		$path = $parsed->getElementsByTagName('from')->
+			item(0)->getElementsByTagName('scope')->
+			item(0)->getElementsByTagName('href')->item(0)->nodeValue;
+		$user = \OCP\USER::getUser();
+		$path = preg_replace('|/files/'.$user.'|', '', $path);
+		OC_Log::write('chooser','Search path: '.$path, OC_Log::WARN);
+		if($this->mediaSearch){
+			$this->httpPropfind($path);
+		}
+	}
+	
+	// This is only for favorite search from the iPhone app
+	private $favoriteSearch = false;
+	protected function httpReport($uri) {
+		$xml = $this->httpRequest->getBody(true);
+		OC_Log::write('chooser','XML: '.$xml, OC_Log::WARN);
+		$xml = preg_replace('/&(?!#?[a-z0-9]+;)/', '&amp;', $xml);
+		$parsed = simplexml_load_string($xml);
+		$parsed = dom_import_simplexml($parsed);
+		$favorite = $parsed->getElementsByTagName('filter-rules')->
+			item(0)->getElementsByTagName('favorite')->item(0)->nodeValue;
+			OC_Log::write('chooser','Favorite: '.$favorite, OC_Log::WARN);
+		if($favorite=="1"){
+			$this->favoriteSearch = true;
+			// Commented out, since it didn't work.
+			// It triggered a recursion of propfinds into every directory
+			// and still didn't cause anuthing to show up under Favorites.
+			$this->httpPropfind($uri);
+		}
+	}
+	
 	/**
 	 * @see \Sabre\DAV\Server
 	 */
 	protected function httpPropfind($uri) {
-
 		// $xml = new \Sabre\DAV\XMLReader(file_get_contents('php://input'));
 		$requestedProperties = $this->parsePropFindRequest($this->httpRequest->getBody(true));
 
-		$depth = $this->getHTTPDepth(1);
+		$depth = $this->favoriteSearch?1:$this->getHTTPDepth(1);
 		// The only two options for the depth of a propfind is 0 or 1
 		// if ($depth!=0) $depth = 1;
 		
@@ -56,7 +134,6 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		
 		//$newProperties['href'] = preg_replace('/^(\/*remote.php\/)mydav\//', '$1/wdav/', trim($myPath,'/'));
 		
-
 		$newProperties = $this->getPropertiesForPath($uri, $requestedProperties, $depth);
 
 		// This is a multi-status response
@@ -79,9 +156,21 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 
 		$data = $this->generateMultiStatus($newProperties, $minimal);
 		
-		
 		if($this->tree->sharingInOut){
 			$data = str_replace('<d:href>/sharingout/', '<d:href>/sharingin/', $data);
+		}
+		if($this->favoriteSearch){
+			$user = \OCP\USER::getUser();
+			$data = str_replace('<d:href>/remote.php/mydav/',
+					'<d:href>/remote.php/dav/files/'.$user.'/', $data);
+			$data = str_replace('<d:href>', "<d:status>HTTP/1.1 200 OK</d:status>\n<d:href>", $data);
+			$data = str_replace('<d:href>/remote.php/dav/files/'.$user.'/%40%40/',
+					'<d:href>/remote.php/dav/files/'.$user.'/@@/', $data);
+		}
+		if($this->mediaSearch){
+			$user = \OCP\USER::getUser();
+			$data = str_replace('<d:href>/remote.php/mydav/', '<d:href>/remote.php/dav/files/'.
+					$user.'/', $data);
 		}
 		
 		$this->httpResponse->sendBody($data);
@@ -93,10 +182,14 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 	 */
 	private function addPathNodesRecursively(&$nodes, $path) {
 		foreach($this->tree->getChildren($path) as $childNode) {
-                        if($this->excludePath($path) || $this->excludePath($path . '/' . $childNode->getName())){
-                            continue;
-                        }
-			$nodes[$path . '/' . $childNode->getName()] = $childNode;
+			if($this->excludePath($path) || $this->excludePath($path . '/' . $childNode->getName())){
+				continue;
+			}
+			if(!$this->mediaSearch || ($childNode instanceof \OC_Connector_Sabre_File &&
+					(substr($childNode->getContentType(), 0, 6)=="image/" ||
+							substr($childNode->getContentType(), 0, 6)=="movie/"))){
+				$nodes[$path . '/' . $childNode->getName()] = $childNode;
+			}
 			if ($childNode instanceof \Sabre\DAV\ICollection)
 				$this->addPathNodesRecursively($nodes, $path . '/' . $childNode->getName());
 		}
@@ -149,24 +242,49 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 			return $returnPropertyList;
 		}
 		
-		$parentNode = $this->tree->getNodeForPath($path);
-		$nodes = array(
-			$path => $parentNode
-		);
-		if ($depth==1 && $parentNode instanceof \Sabre\DAV\ICollection) {
+		if($this->mediaSearch){
+			$nodes = array();
+		}
+		elseif($this->favoriteSearch){
+			//$parentNode = $this->tree->getNodeForPath($path);
+			//$nodes = array($path => $parentNode);
+			$nodes = array();
+		}
+		else{
+			$parentNode = $this->tree->getNodeForPath($path);
+			$nodes = array($path => $parentNode);
+		}
+		
+		if($this->favoriteSearch){
 			$children = $this->tree->getChildren($path);
 			foreach($children as $childNode){
-				OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName().":".$this->tree->sharingIn, OC_Log::INFO);
+				OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName().":".
+						serialize($childNode->getProperties(array('href'))), OC_Log::WARN);
+				$nodes[$path . '/' . $childNode->getName()] = $childNode;
+			}
+		}
+		elseif($depth==1 && !empty($parentNode) && $parentNode instanceof \Sabre\DAV\ICollection) {
+			$children = $this->tree->getChildren($path);
+			foreach($children as $childNode){
+				OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName().":".$this->tree->sharingIn,
+						OC_Log::INFO);
 				if($this->excludePath($path . '/' . $childNode->getName())){
+					continue;
+				}
+				if($this->mediaSearch && (!$childNode instanceof \OC_Connector_Sabre_File ||
+					(substr($childNode->getContentType(), 0, 6)!="image/" &&
+					substr($childNode->getContentType(), 0, 6)!="movie/"))){
 					continue;
 				}
 				$nodes[$path . '/' . $childNode->getName()] = $childNode;
 			}
-		} else if ($depth == self::DEPTH_INFINITY && $parentNode instanceof \Sabre\DAV\ICollection) {
+		}
+		elseif($this->mediaSearch ||
+				$depth == self::DEPTH_INFINITY && $parentNode instanceof \Sabre\DAV\ICollection) {
 			$this->addPathNodesRecursively($nodes, $path);
 		}
 		
-		//OC_Log::write('chooser','nodes: '.$path.":".$depth.":".count($nodes), OC_Log::WARN);
+		OC_Log::write('chooser','nodes: '.$path.":".$depth.":".count($nodes), OC_Log::INFO);
 
 
 		// If the propertyNames array is empty, it means all properties are requested.
@@ -205,9 +323,10 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 				$currentPropertyNames[] = '{DAV:}resourcetype';
 				$removeRT = true;
 			}
-
+			
 			if($node instanceof \OC_Connector_Sabre_Sharingin_Directory ||
-				$node instanceof \OC_Connector_Sabre_Sharingout_Directory){
+				$node instanceof \OC_Connector_Sabre_Sharingout_Directory ||
+				$node instanceof \OC_Connector_Sabre_Favorites_Directory){
 				$result = true;
 			}
 			else{
@@ -296,7 +415,12 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 				$this->broadcastEvent('afterGetProperties',array(trim($myPath,'/'),&$newProperties, $node));
 			}
 
-			$newProperties['href'] = trim($myPath,'/');
+			if($node instanceof \OC_Connector_Sabre_Favorite_Directory){
+				$newProperties['href'] = trim($node->getHref(),'/');
+			}
+			else{
+				$newProperties['href'] = trim($myPath,'/');
+			}
 
 			// Its is a WebDAV recommendation to add a trailing slash to collectionnames.
 			// Apple's iCal also requires a trailing slash for principals (rfc 3744), though this is non-standard.
@@ -304,6 +428,29 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 				$rt = $newProperties[200]['{DAV:}resourcetype'];
 				if ($rt->is('{DAV:}collection') || $rt->is('{DAV:}principal')) {
 					$newProperties['href'] .='/';
+				}
+			}
+			
+			if($this->mediaSearch){
+				$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid'] =
+				\OCA\FilesSharding\Lib::getFileId($path);
+				$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}size'] =
+					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
+				$newProperties[200]['{DAV:}getcontentlength'] =
+					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite'] = '0';
+				$newProperties[200]['{' . self::NS_NEXTCLOUD . '}is-encrypted'] = '0';
+			}
+			
+			elseif($this->favoriteSearch){
+				$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}size'] =
+					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
+				$newProperties[200]['{DAV:}getcontentlength'] =
+					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite'] = '0';
+				$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite'] = '1';
+				$newProperties[200]['{' . self::NS_NEXTCLOUD . '}is-encrypted'] = '0';
+				if($node instanceof OC_Connector_Sabre_Favorite_Directory){
+					$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid'] =
+						$node->getOcFileId();
 				}
 			}
 

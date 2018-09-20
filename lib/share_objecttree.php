@@ -2,6 +2,7 @@
 
 require_once 'chooser/lib/sharingin_directory.php';
 require_once 'chooser/lib/sharingout_directory.php';
+require_once 'chooser/lib/favorites_directory.php';
 
 class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 
@@ -11,6 +12,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	public $sharingIn = false;
 	public $sharingOut = false;
 	public $sharingInOut = false;
+	public $favorites = false;
 	
 	public function fixPath(&$path){
 		if($this->auth_token!=null && $this->auth_path!=null){
@@ -33,6 +35,11 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	public function sharingOutInit() {
 		OC_Log::write('chooser','Creating sharingout root dir', OC_Log::WARN);
 		$this->rootNode = new \OC_Connector_Sabre_Sharingout_Directory();
+	}
+	
+	public function favoritesInit() {
+		OC_Log::write('chooser','Creating favorites root dir', OC_Log::WARN);
+		$this->rootNode = new \OC_Connector_Sabre_Favorites_Directory();
 	}
 	
 	public function getNodeForPath($path) {
@@ -124,7 +131,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			$shares = \OCA\Files\Share_files_sharding\Api::getFilesSharedWithMe();
 			$found = false;
 			foreach($shares->getData() as $share) {
-				OC_Log::write('chooser','checking sharee '.$share['uid_owner'], OC_Log::WARN);
+				OC_Log::write('chooser','checking sharee '.$share['uid_owner'].' -->  '.$share['path'], OC_Log::WARN);
 				if(strpos($path, $share['uid_owner'].'/')!==0 && $path!=$share['uid_owner']){
 					continue;
 				}
@@ -135,25 +142,25 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 				$group = '';
 				if(!empty($share['path']) && preg_match("|^/*user_group_admin/|", $share['path'])){
 					$group = preg_replace("|^/*user_group_admin/([^/]+)/.*|", "$1", $share['path']);
-					$sharepath = preg_replace('|^user_group_admin/|', '', $share['path']);
+					$sharepath = preg_replace('|^/*user_group_admin/[^/]+/*|', '', $share['path']);
 				}
 				else{
-					$sharepath = preg_replace('|^files/|', '', $share['path']);
+					$sharepath = preg_replace('|^/*files/|', '', $share['path']);
 				}
 				$filepath = preg_replace('|^'.$share['uid_owner'].'/|', '', $path);
-				OC_Log::write('chooser','checking path '.$filepath.'<-->'.$sharepath, OC_Log::WARN);
+				OC_Log::write('chooser','checking path '.$filepath.'<-->'.$sharepath.' : '.$group, OC_Log::WARN);
 				if(strpos($filepath, $sharepath)===0){
-					$info = \OCA\FilesSharding\Lib::getFileInfo($filepath, $share['uid_owner'], $share['item_source'], '',
-							$user, $group);
+					$info = \OCA\FilesSharding\Lib::getFileInfo($filepath, $share['uid_owner'], $share['item_source'],
+							'', $user, $group);
 					\OC_Util::teardownFS();
 					\OC_User::setUserId($share['uid_owner']);
 					\OC_Util::setupFS($share['uid_owner']);
-					OC\Files\Filesystem::init($share['uid_owner'],
-							!empty($group)?'/'.$share['uid_owner'].'/user_group_admin/'.$group:'/'.$share['uid_owner'].'/files');
+					\OC\Files\Filesystem::init($share['uid_owner'],
+							!empty($group)?'/'.$share['uid_owner'].'/user_group_admin/'.$group:
+															'/'.$share['uid_owner'].'/files');
 					$this->fileView = \OC\Files\Filesystem::getView();
-					$info = $this->fileView->getFileInfo($filepath);
 					OC_Log::write('chooser','Using view '.$share['path'].':'.$path.':'.$filepath.':'.
-							$info->getType().':'.$this->fileView->getFileInfo($filepath)->getPermissions(), OC_Log::WARN);
+							$info->getType().':'.$info->getPermissions(), OC_Log::WARN);
 				}
 			}
 			if($found && $shareeRoot){
@@ -163,6 +170,10 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			if(!$found && empty($info)){
 				throw new \Sabre\DAV\Exception\NotFound('File with name ' . $path . ' could not be located. '.$found);
 			}
+		}
+		
+		elseif(isset($this->favorites) && $this->favorites){
+			OC_Log::write('chooser','ERROR: we should not get here...'.$path, OC_Log::ERROR);
 		}
 		
 		if(empty($info)){
