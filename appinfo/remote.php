@@ -89,11 +89,18 @@ if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/files/")===0){
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0){
 	$baseuri = OC::$WEBROOT."/public";
 }
+
+$user = \OC_User::getUser();
+if(empty($user)){
+	$user = $_SERVER['PHP_AUTH_USER'];
+}
+
 // TODO: more thorough check. Currently the favorite call from iOS
 // seems to be the only one using REPORT. We can't rely on that in the future.
-elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".$_SERVER['PHP_AUTH_USER']."/")===0 &&
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
+		$user."/")===0 &&
 		strtolower($_SERVER['REQUEST_METHOD'])=='report'){
-	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$_SERVER['PHP_AUTH_USER'];
+			$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
 	$objectTree->favorites = true;
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/")===0){
@@ -102,8 +109,8 @@ elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/")===0){
 	$objectTree->allowUpload = false;
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
-				$_SERVER['PHP_AUTH_USER']."/@@/sharingin/")===0){
-		$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$_SERVER['PHP_AUTH_USER']."/@@/sharingin";
+		$user."/@@/sharingin/")===0){
+			$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user."/@@/sharingin";
 		$objectTree->sharingIn = true;
 		$objectTree->allowUpload = false;
 		$favoriteLink = true;
@@ -122,15 +129,15 @@ elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/group/")===0){
 	$group = preg_replace("|/.*$|", "", $group);
 	// Ignored as empty($_SERVER['BASE_URI'] is set by user_group_admin
 	$baseuri = OC::$WEBROOT."/group/";
-	$_SERVER['BASE_DIR'] = '/'.$_SERVER['PHP_AUTH_USER'].'/user_group_admin/';
+	$_SERVER['BASE_DIR'] = '/'.$user.'/user_group_admin/';
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
-		$_SERVER['PHP_AUTH_USER']."/@@/group/")===0){
+		$user."/@@/group/")===0){
 	$group = preg_replace("|^".OC::$WEBROOT."/remote.php/dav/files/".
-			$_SERVER['PHP_AUTH_USER']."/\@\@/group/|", "", $_SERVER['REQUEST_URI']);
+			$user."/\@\@/group/|", "", $_SERVER['REQUEST_URI']);
 	$group = preg_replace("|/.*$|", "", $group);
-	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$_SERVER['PHP_AUTH_USER']."/@@/group/".$group;
-	$_SERVER['BASE_DIR'] = '/'.$_SERVER['PHP_AUTH_USER'].'/user_group_admin/'.$group;
+	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user."/@@/group/".$group;
+	$_SERVER['BASE_DIR'] = '/'.$user.'/user_group_admin/'.$group;
 	$favoriteLink = true;
 }
 $server->setBaseUri($baseuri);
@@ -246,7 +253,7 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 			OC_Log::write('chooser','Non-files access: '.$_SERVER['REQUEST_URI'].
 					'-->'.$_SERVER['BASE_DIR'], OC_Log::WARN);
 			\OC\Files\Filesystem::tearDown();
-			\OC\Files\Filesystem::init($_SERVER['PHP_AUTH_USER'], $_SERVER['BASE_DIR']);
+			\OC\Files\Filesystem::init($user, $_SERVER['BASE_DIR']);
 			$view = new \OC\Files\View($_SERVER['BASE_DIR']);
 		}
 		else{

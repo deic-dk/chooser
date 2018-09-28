@@ -103,7 +103,11 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 					// Which happens when listing e.g. /sharingin/test/ and then being redirected to
 					// /sharingout/test/.
 					// On the redirected end the @@ is stripped off and sharingout replaced with sharingin.
-					$redirect = rtrim((empty($server)?$master:$server), '/').'/sharingout/@@/'.$path;
+					$redirect = rtrim((empty($server)?$master:$server), '/');
+					$redirect = $redirect.(empty($_SERVER['HTTP_USER_AGENT']) ||
+							stripos($_SERVER['HTTP_USER_AGENT'], "cyberduck")===false?
+							'/sharingout/'.$path:
+							'/sharingout/@@/'.$path);
 					OC_Log::write('chooser','Redirecting sharingin target '.$path.' to '.$share['uid_owner'].'-->'.$redirect, OC_Log::WARN);
 					\OC_Response::redirect($redirect);
 					exit();
@@ -123,10 +127,16 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			}
 			//else
 				// Now deal with haringout/some.user@inst.dk/some_share
-			\OC_Util::teardownFS();
-			\OC_User::setUserId($_SERVER['PHP_AUTH_USER']);
-			\OC_Util::setupFS($_SERVER['PHP_AUTH_USER']);
 			$user = \OC_User::getUser();
+			if(empty($user)){
+				$user = $_SERVER['PHP_AUTH_USER'];
+			}
+			if(empty($user)){
+				OC_Log::write('chooser','EMPTY USER '.serialize($_SERVER), OC_Log::WARN);
+			}
+			\OC_Util::teardownFS();
+			\OC_User::setUserId($user);
+			\OC_Util::setupFS($user);
 			OC_Log::write('chooser','Creating sharingout sharee dir '.$user.':'.$path, OC_Log::WARN);
 			$shares = \OCA\Files\Share_files_sharding\Api::getFilesSharedWithMe();
 			$found = false;
