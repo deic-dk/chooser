@@ -97,7 +97,7 @@ if(empty($user)){
 
 // TODO: more thorough check. Currently the favorite call from iOS
 // seems to be the only one using REPORT. We can't rely on that in the future.
-elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
+if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
 		$user."/")===0 &&
 		strtolower($_SERVER['REQUEST_METHOD'])=='report'){
 			$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
@@ -141,6 +141,11 @@ elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
 	$favoriteLink = true;
 }
 $server->setBaseUri($baseuri);
+
+OC_Log::write('chooser','BASE URI: '.$baseuri.':'.
+		(empty($_SERVER['BASE_URI'])?'':$_SERVER['BASE_URI']).
+		':'.$server->getBaseUri().':'.$_SERVER['REQUEST_URI'].
+		'<->'.OC::$WEBROOT."/sharingout/", OC_Log::INFO);
 
 // Auth backends
 $defaults = new OC_Defaults();
@@ -212,8 +217,6 @@ if(!empty($_SERVER['BASE_URI'])){
 	// Accept include from remote.php from other apps and set root accordingly
 	$server->setBaseUri($_SERVER['BASE_URI']);
 }
-
-OC_Log::write('chooser','BASE URI: '.$baseuri, OC_Log::INFO);
 
 // In the case of a move request, a header will contain the destination
 // with hard-wired host name.
