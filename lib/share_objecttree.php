@@ -94,7 +94,8 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 				$filepath = preg_replace('|^'.$share['uid_owner'].'/|', '', $path);
 				if($path==$share['uid_owner'].'/'.$share['path'] ||
 						strpos($path, $share['uid_owner'].'/'.$share['path'].'/')==0){
-					$info = \OCA\FilesSharding\Lib::getFileInfo($filepath, $share['uid_owner'], $share['item_source'], '',
+					$info = \OCA\FilesSharding\Lib::getFileInfo($filepath, $share['uid_owner'],
+							/*$share['item_source']*//*Nope - don't use the ID of the shared folder*/'', '',
 							$user, $group);
 					$server = \OCA\FilesSharding\Lib::getServerForUser($share['uid_owner'], false);
 					$master = \OCA\FilesSharding\Lib::getMasterURL();
@@ -160,7 +161,8 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 				$filepath = preg_replace('|^'.$share['uid_owner'].'/|', '', $path);
 				OC_Log::write('chooser','checking path '.$filepath.'<-->'.$sharepath.' : '.$group, OC_Log::WARN);
 				if(strpos($filepath, $sharepath)===0){
-					$info = \OCA\FilesSharding\Lib::getFileInfo($filepath, $share['uid_owner'], $share['item_source'],
+					$info = \OCA\FilesSharding\Lib::getFileInfo($filepath, $share['uid_owner'],
+							/*$share['item_source']*//*Nope - don't use the ID of the shared folder*/'',
 							'', $user, $group);
 					\OC_Util::teardownFS();
 					\OC_User::setUserId($share['uid_owner']);
