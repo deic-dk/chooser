@@ -94,7 +94,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 				$filepath = preg_replace('|^'.$share['uid_owner'].'/|', '', $path);
 				if($path==$share['uid_owner'].'/'.$share['path'] ||
 						strpos($path, $share['uid_owner'].'/'.$share['path'].'/')==0){
-					$info = \OCA\FilesSharding\Lib::getFileInfo($filepath, $share['uid_owner'],
+							$info = \OCA\FilesSharding\Lib::getFileInfo($sharepath.'/'.$filepath, $share['uid_owner'],
 							/*$share['item_source']*//*Nope - don't use the ID of the shared folder*/'', '',
 							$user, $group);
 					$server = \OCA\FilesSharding\Lib::getServerForUser($share['uid_owner'], false);
