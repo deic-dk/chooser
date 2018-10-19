@@ -86,15 +86,18 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 				$group = '';
 				if(!empty($share['path']) && preg_match("|^/*user_group_admin/|", $share['path'])){
 					$group = preg_replace("|^/*user_group_admin/([^/]+)/.*|", "$1", $share['path']);
-					$sharepath = $share['path'];
+					$sharepath = preg_replace('|^/*user_group_admin/[^/]+/*|', '', $share['path']);
 				}
 				else{
-					$sharepath = $share['path'];
+					$sharepath = preg_replace('|^/*files/|', '', $share['path']);
 				}
-				$filepath = preg_replace('|^'.$share['uid_owner'].'/|', '', $path);
-				if($path==$share['uid_owner'].'/'.$share['path'] ||
-						strpos($path, $share['uid_owner'].'/'.$share['path'].'/')==0){
-							$info = \OCA\FilesSharding\Lib::getFileInfo($sharepath.'/'.$filepath, $share['uid_owner'],
+				$sharename = preg_replace('|^.*/|', '', $sharepath);
+				$filepath = preg_replace('|^'.$share['uid_owner'].'/'.$sharename.'|', '', $path);
+				OC_Log::write('chooser','Checking share '.$path.':'.$share['uid_owner'].'/'.$sharename.'/'.
+						':'.$sharepath.':'.$filepath, OC_Log::WARN);
+				if($path==$share['uid_owner'].'/'.$sharename ||
+						strpos($path, $share['uid_owner'].'/'.$sharename.'/')===0){
+							$info = \OCA\FilesSharding\Lib::getFileInfo($sharepath.$filepath, $share['uid_owner'],
 							/*$share['item_source']*//*Nope - don't use the ID of the shared folder*/'', '',
 							$user, $group);
 					$server = \OCA\FilesSharding\Lib::getServerForUser($share['uid_owner'], false);
@@ -121,13 +124,13 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 		}
 		
 		elseif(isset($this->sharingOut) && $this->sharingOut){
-			// Deal with sharingin/some.user@inst.dk/
+			// Deal with sharingout/some.user@inst.dk/
 			$shareeRoot = false;
 			if(preg_match('|^[^/]+$|', $path)){
 				$shareeRoot = true;
 			}
 			//else
-				// Now deal with haringout/some.user@inst.dk/some_share
+				// Now deal with sharingout/some.user@inst.dk/some_share
 			$user = \OC_User::getUser();
 			if(empty($user)){
 				$user = $_SERVER['PHP_AUTH_USER'];
@@ -158,10 +161,12 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 				else{
 					$sharepath = preg_replace('|^/*files/|', '', $share['path']);
 				}
-				$filepath = preg_replace('|^'.$share['uid_owner'].'/|', '', $path);
+				$sharename = preg_replace('|^.*/|', '', $sharepath);
+				$filepath = preg_replace('|^'.$share['uid_owner'].'/'.$sharename.'|', '', $path);
 				OC_Log::write('chooser','checking path '.$filepath.'<-->'.$sharepath.' : '.$group, OC_Log::WARN);
-				if(strpos($filepath, $sharepath)===0){
-					$info = \OCA\FilesSharding\Lib::getFileInfo($filepath, $share['uid_owner'],
+				if($path==$share['uid_owner'].'/'.$sharename ||
+						strpos($path, $share['uid_owner'].'/'.$sharename.'/')===0){
+					$info = \OCA\FilesSharding\Lib::getFileInfo($sharepath.$filepath, $share['uid_owner'],
 							/*$share['item_source']*//*Nope - don't use the ID of the shared folder*/'',
 							'', $user, $group);
 					\OC_Util::teardownFS();
