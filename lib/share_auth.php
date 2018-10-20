@@ -72,13 +72,12 @@ class Share extends AbstractBasic {
 			}
 		}
 		if($this->userId!=null && trim($this->userId)!==''){
-			if(\OC_Appconfig::getValue('core', 'shareapi_allow_public_upload', 'yes')==='yes'){
-				\OC_Log::write('chooser','Permissions: '.$share['permissions'], \OC_Log::WARN);
-				$this->allowUpload = (bool) ($share['permissions'] & \OCP\PERMISSION_CREATE);
-			}
+			\OC_Log::write('chooser','Permissions: '.$share['permissions'], \OC_Log::WARN);
+			$this->allowUpload = (bool) ($share['permissions'] & \OCP\PERMISSION_CREATE);
 		}
 		$this->currentUser = $this->userId;
 		\OC_User::setUserId($this->userId);
+		return true;
 	}
 	
 	private function setupFromToken($token){
