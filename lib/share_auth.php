@@ -14,13 +14,13 @@ class Share extends AbstractBasic {
 
 	private static $baseUri = "/remote.php/mydav";
 	public $userId = '';
+	public $authUser = '';
 	
 	public $allowUpload = false;
 	public $path = null;
 	public $token = null;
 	private $sharingOut = false;
 	private $sharingOutAuthenticated = false;
-	
 	
 	private function check_password($owner, $password, $storedPwHash){
 		$forcePortable = (CRYPT_BLOWFISH != 1);
@@ -32,6 +32,10 @@ class Share extends AbstractBasic {
 	}
 
 	public function __construct($baseuri) {
+		$this->authUser = \OC_User::getUser();
+		if(empty($this->authUser)){
+			$this->authUser = $_SERVER['PHP_AUTH_USER'];
+		}
 		self::$baseUri = $baseuri;
 		$reqUri = \OCP\Util::getRequestUri();
 		$reqPath = substr($reqUri, strlen(self::$baseUri));
@@ -50,12 +54,17 @@ class Share extends AbstractBasic {
 	
 	private function setupSharingout($reqPath){
 		$checkOwner = preg_replace('|^/([^/]+)/*.*|', '$1', $reqPath);
-		if(strpos($checkOwner, '/')!==false || $checkOwner==$reqPath || empty($_SERVER['PHP_AUTH_USER'])){
+		if(strpos($checkOwner, '/')!==false || $checkOwner==$reqPath || empty($this->authUser)){
 			return false;
 		}
-		if(\OCA\FilesSharding\Lib::onServerForUser($_SERVER['PHP_AUTH_USER'])){
-			\OC_User::setUserId($_SERVER['PHP_AUTH_USER']);
-			\OC_Util::setUpFS($_SERVER['PHP_AUTH_USER']);
+		elseif($this->authUser==$checkOwner){
+			$this->userId = $checkOwner;
+			$this->sharingOutAuthenticated = true;
+			return true;
+		}
+		if(\OCA\FilesSharding\Lib::onServerForUser($this->authUser)){
+			\OC_User::setUserId($this->authUser);
+			\OC_Util::setUpFS($this->authUser);
 			$shares = \OCA\Files\Share_files_sharding\Api::getFilesSharedWithMe();
 			$sharesData = $shares->getData();
 		}
@@ -64,10 +73,24 @@ class Share extends AbstractBasic {
 					'itemType' => 'file'));
 		}
 		foreach($sharesData as $share) {
-			if($share['uid_owner']==$checkOwner){
+			
+			$group = '';
+			if(!empty($share['path']) && preg_match("|^/*user_group_admin/|", $share['path'])){
+				$group = preg_replace("|^/*user_group_admin/([^/]+)/.*|", "$1", $share['path']);
+				$sharepath = preg_replace('|^/*user_group_admin/[^/]+/*|', '', $share['path']);
+			}
+			else{
+				$sharepath = preg_replace('|^/*files/|', '', $share['path']);
+			}
+			$sharename = preg_replace('|^.*/|', '', $sharepath);
+			\OC_Log::write('share_auth','checking path '.$sharename.':'.$sharepath.':'.$checkOwner.
+					':'.$reqPath.' : '.$group, \OC_Log::WARN);
+			if($share['uid_owner']==$checkOwner && ($reqPath=='/'.$share['uid_owner'].'/'.$sharename ||
+					strpos($reqPath, '/'.$share['uid_owner'].'/'.$sharename.'/')===0)){
 				$this->userId = $share['uid_owner'];
 				$this->sharingOutAuthenticated = true;
-				\OCP\Util::writeLog('chooser', 'User OK: '. $checkOwner.': '.$_SERVER['PHP_AUTH_USER'], \OC_Log::WARN);
+				\OCP\Util::writeLog('chooser', 'User OK: '. $checkOwner.': '.$this->authUser.
+						":".$this->userId, \OC_Log::WARN);
 				break;
 			}
 		}
@@ -75,8 +98,11 @@ class Share extends AbstractBasic {
 			\OC_Log::write('chooser','Permissions: '.$share['permissions'], \OC_Log::WARN);
 			$this->allowUpload = (bool) ($share['permissions'] & \OCP\PERMISSION_CREATE);
 		}
-		$this->currentUser = $this->userId;
-		\OC_User::setUserId($this->userId);
+		else{
+			return false;
+		}
+		//$this->currentUser = $this->userId;
+		//\OC_User::setUserId($this->userId);
 		return true;
 	}
 	
@@ -133,6 +159,10 @@ class Share extends AbstractBasic {
 				$this->allowUpload = (bool) ($linkedItem['permissions'] & \OCP\PERMISSION_CREATE);
 			}
 		}
+		else{
+			\OC_Util::tearDownFS();
+			return false;
+		}
 		$this->currentUser = $this->userId;
 		\OC_User::setUserId($this->userId);
 		//\OC_Util::setUpFS($this->userId);
@@ -152,7 +182,8 @@ class Share extends AbstractBasic {
 		\OC_Log::write('chooser','Validating: '.$this->userId, \OC_Log::WARN);
 		if($this->sharingOut && $this->sharingOutAuthenticated){
 			\OC_Util::tearDownFS();
-			\OC_User::setUserId($_SERVER['PHP_AUTH_USER']);
+			\OC_User::setUserId($this->authUser);
+			return true;
 		}
 		elseif(!empty($this->userId) && \OC_User::userExists($this->userId)){
 			$this->currentUser = $this->userId;
@@ -169,11 +200,12 @@ class Share extends AbstractBasic {
 		\OC_Log::write('chooser','Authenticating: '.$this->userId, \OC_Log::INFO);
 		if($this->sharingOut && $this->sharingOutAuthenticated){
 			\OC_Util::tearDownFS();
-			\OC_User::setUserId($_SERVER['PHP_AUTH_USER']);
+			\OC_User::setUserId($this->authUser);
+			return true;
 		}
 		elseif(!empty($this->userId) && \OC_User::userExists($this->userId)){
 			$this->currentUser = $this->userId;
-			//\OC_User::setUserId($this->userId);
+			\OC_User::setUserId($this->userId);
 			\OC_Util::setUpFS($this->userId);
 			\OC_Log::write('chooser','Authentication: all good for '.$this->userId, \OC_Log::WARN);
 			return true;

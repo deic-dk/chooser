@@ -13,6 +13,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	public $sharingOut = false;
 	public $sharingInOut = false;
 	public $favorites = false;
+	private $auth_user;
 	
 	public function fixPath(&$path){
 		if($this->auth_token!=null && $this->auth_path!=null){
@@ -25,14 +26,32 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 		$this->rootNode = $rootNode;
 		$this->fileView = $view;
 		$this->mountManager = $mountManager;
+		if(empty($this->auth_user)){
+			$this->auth_user = \OC_User::getUser();
+			if(!empty($_SERVER['PHP_AUTH_USER'])){
+				$this->auth_user = $_SERVER['PHP_AUTH_USER'];
+			}
+		}
 	}
 	
 	public function sharingInInit() {
+		if(empty($this->auth_user)){
+			$this->auth_user = \OC_User::getUser();
+			if(!empty($_SERVER['PHP_AUTH_USER'])){
+				$this->auth_user = $_SERVER['PHP_AUTH_USER'];
+			}
+		}
 		OC_Log::write('chooser','Creating sharingin root dir', OC_Log::WARN);
 		$this->rootNode = new \OC_Connector_Sabre_Sharingin_Directory();
 	}
 	
 	public function sharingOutInit() {
+		if(empty($this->auth_user)){
+			$this->auth_user = \OC_User::getUser();
+			if(!empty($_SERVER['PHP_AUTH_USER'])){
+				$this->auth_user = $_SERVER['PHP_AUTH_USER'];
+			}
+		}
 		OC_Log::write('chooser','Creating sharingout root dir', OC_Log::WARN);
 		$this->rootNode = new \OC_Connector_Sabre_Sharingout_Directory();
 	}
@@ -43,7 +62,8 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	}
 	
 	public function getNodeForPath($path) {
-
+		\OC_Log::write('chooser','Getting node for '.$path.':'.$this->sharingOut, \OC_Log::INFO);
+		
 		if($this->allowUpload==false &&
 		(strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' || strtolower($_SERVER['REQUEST_METHOD'])=='put' ||
 		strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
@@ -73,7 +93,6 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			// Now deal with haringin/some.user@inst.dk/some_share
 			OC_Log::write('chooser','Creating sharingin sharee dir '.$path, OC_Log::WARN);
 			$shares = \OCA\Files\Share_files_sharding\Api::getFilesSharedWithMe();
-			$user = \OC_User::getUser();
 			$found = false;
 			foreach($shares->getData() as $share) {
 				if(strpos($path, $share['uid_owner'].'/')!==0 && $path!=$share['uid_owner']){
@@ -99,7 +118,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 						strpos($path, $share['uid_owner'].'/'.$sharename.'/')===0){
 							$info = \OCA\FilesSharding\Lib::getFileInfo($sharepath.$filepath, $share['uid_owner'],
 							/*$share['item_source']*//*Nope - don't use the ID of the shared folder*/'', '',
-							$user, $group);
+									$this->auth_user, $group);
 					$server = \OCA\FilesSharding\Lib::getServerForUser($share['uid_owner'], false);
 					$master = \OCA\FilesSharding\Lib::getMasterURL();
 					$path = implode('/', array_map('rawurlencode', explode('/', ltrim($path, '/'))));
@@ -131,17 +150,14 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			}
 			//else
 				// Now deal with sharingout/some.user@inst.dk/some_share
-			$user = \OC_User::getUser();
-			if(empty($user)){
-				$user = $_SERVER['PHP_AUTH_USER'];
-			}
-			if(empty($user)){
+			if(empty($this->auth_user)){
 				OC_Log::write('chooser','EMPTY USER '.serialize($_SERVER), OC_Log::WARN);
+				return false;
 			}
 			\OC_Util::teardownFS();
-			\OC_User::setUserId($user);
-			\OC_Util::setupFS($user);
-			OC_Log::write('chooser','Creating sharingout sharee dir '.$user.':'.$path, OC_Log::WARN);
+			\OC_User::setUserId($this->auth_user);
+			\OC_Util::setupFS($this->auth_user);
+			OC_Log::write('chooser','Creating sharingout sharee dir '.$this->auth_user.':'.$path, OC_Log::WARN);
 			$shares = \OCA\Files\Share_files_sharding\Api::getFilesSharedWithMe();
 			$found = false;
 			foreach($shares->getData() as $share) {
@@ -168,7 +184,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 						strpos($path, $share['uid_owner'].'/'.$sharename.'/')===0){
 					$info = \OCA\FilesSharding\Lib::getFileInfo($sharepath.$filepath, $share['uid_owner'],
 							/*$share['item_source']*//*Nope - don't use the ID of the shared folder*/'',
-							'', $user, $group);
+							'', $this->auth_user, $group);
 					\OC_Util::teardownFS();
 					\OC_User::setUserId($share['uid_owner']);
 					\OC_Util::setupFS($share['uid_owner']);
@@ -178,6 +194,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 					$this->fileView = \OC\Files\Filesystem::getView();
 					OC_Log::write('chooser','Using view '.$share['path'].':'.$path.':'.$filepath.':'.
 							$info->getType().':'.$info->getPermissions(), OC_Log::WARN);
+					break;
 				}
 			}
 			if($found && $shareeRoot){
@@ -213,7 +230,8 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 		if (!$info) {
 			throw new \Sabre\DAV\Exception\NotFound('File with name ' . $filepath . ' could not be located');
 		}
-
+		
+		OC_Log::write('chooser','Returning Sabre '.$info->getType().': '.$info->getPath(), OC_Log::INFO);
 		
 		if ($info->getType() === 'dir') {
 			$node = new \OC_Connector_Sabre_Directory($this->fileView, $info);
