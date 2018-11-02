@@ -136,6 +136,7 @@ class Share extends AbstractBasic {
 				$this->token = $token;
 				$this->path = \OC\Files\Filesystem::getPath($rootLinkItem['item_source']);
 				$this->path = preg_replace("/^\//", "", $this->path);
+				$linkItem['path'] = $this->path;
 				\OC_Log::write('chooser','Token: '.$token.', path: '.$this->path.', owner: '.$rootLinkItem['uid_owner'], \OC_Log::WARN);
 			}
 		}
