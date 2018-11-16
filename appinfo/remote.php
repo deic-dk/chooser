@@ -95,13 +95,18 @@ if(empty($user)){
 	$user = $_SERVER['PHP_AUTH_USER'];
 }
 
-// TODO: more thorough check. Currently the favorite call from iOS
+// TODO: more thorough check. Currently the favorites call from iOS
 // seems to be the only one using REPORT. We can't rely on that in the future.
 if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
 		$user."/")===0 &&
 		strtolower($_SERVER['REQUEST_METHOD'])=='report'){
-			$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
+	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
 	$objectTree->favorites = true;
+}
+elseif(strpos(urldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
+		$user."/")===0 &&
+		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch'){
+			$_SERVER['REQUEST_URI'] = urldecode($_SERVER['REQUEST_URI']);
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/")===0){
 	$baseuri = OC::$WEBROOT."/sharingin";

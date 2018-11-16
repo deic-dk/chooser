@@ -92,6 +92,63 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		}
 	}
 	
+	protected function httpProppatch($uri) {
+		$xml = $this->httpRequest->getBody(true);
+		OC_Log::write('chooser','Proppatch XML: '.$xml, OC_Log::WARN);
+		$newProperties = $this->parsePropPatchRequest($xml);
+		
+		$favProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite';
+		if(isset($newProperties[$favProp]) &&
+				OCP\App::isEnabled('internal_bookmarks')){
+			OC_Log::write('chooser','FAVORITE: '.$uri, OC_Log::WARN);
+			$info = \OC\Files\Filesystem::getFileInfo($uri);
+			if($info->getType()=='dir'){
+				require_once 'apps/internal_bookmarks/lib/intbks.class.php';
+				$bookmark = \OC_IntBks::getItemByTarget('/'.rtrim($uri, '/'));
+				if(empty($newProperties[$favProp]) && !empty($bookmark)){
+					\OC_IntBks::deleteItemByTarget(rtrim($uri, '/'), false);
+					$newProperties[$favProp] = null;
+				}
+				elseif($newProperties[$favProp]==1 && empty($bookmark)){
+					\OC_IntBks::insertNewItem('/'.rtrim($uri, '/'), false);
+				}
+			}
+		}
+		
+		$result = $this->updateProperties($uri, $newProperties);
+		
+		$prefer = $this->getHTTPPrefer();
+		$this->httpResponse->setHeader('Vary','Brief,Prefer');
+		
+		if ($prefer['return-minimal']) {
+			
+			// If return-minimal is specified, we only have to check if the
+			// request was succesful, and don't need to return the
+			// multi-status.
+			$ok = true;
+			foreach($result as $code=>$prop) {
+				if ((int)$code > 299) {
+					$ok = false;
+				}
+			}
+			
+			if ($ok) {
+				
+				$this->httpResponse->sendStatus(204);
+				return;
+				
+			}
+			
+		}
+		
+		$this->httpResponse->sendStatus(207);
+		$this->httpResponse->setHeader('Content-Type','application/xml; charset=utf-8');
+		
+		$this->httpResponse->sendBody(
+				$this->generateMultiStatus(array($result))
+				);
+	}
+	
 	// This is only for favorite search from the iPhone app
 	private $favoriteSearch = false;
 	protected function httpReport($uri) {
@@ -102,7 +159,8 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		$parsed = dom_import_simplexml($parsed);
 		$favorite = $parsed->getElementsByTagName('filter-rules')->
 			item(0)->getElementsByTagName('favorite')->item(0)->nodeValue;
-			OC_Log::write('chooser','Favorite: '.$favorite, OC_Log::WARN);
+		OC_Log::write('chooser','Favorite: '.$favorite.'-->'.$this->getBaseUri().
+					'-->'.$uri, OC_Log::WARN);
 		if($favorite=="1"){
 			$this->favoriteSearch = true;
 			// Commented out, since it didn't work.
@@ -117,7 +175,9 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 	 */
 	protected function httpPropfind($uri) {
 		// $xml = new \Sabre\DAV\XMLReader(file_get_contents('php://input'));
-		$requestedProperties = $this->parsePropFindRequest($this->httpRequest->getBody(true));
+		$xml = $this->httpRequest->getBody(true);
+		OC_Log::write('chooser','PROPFIND XML: '.$xml, OC_Log::DEBUG);
+		$requestedProperties = $this->parsePropFindRequest($xml);
 
 		$depth = $this->favoriteSearch?1:$this->getHTTPDepth(1);
 		// The only two options for the depth of a propfind is 0 or 1
@@ -359,11 +419,16 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 			}
 
 			foreach($currentPropertyNames as $prop) {
-
+				OC_Log::write('chooser','PROP: '.$myPath.'-->'.$prop, OC_Log::INFO);
 				if (isset($newProperties[200][$prop])) continue;
 
 				switch($prop) {
-					case '{DAV:}getlastmodified'       : if ($node->getLastModified()) $newProperties[200][$prop] = new \Sabre\DAV\Property\GetLastModified($node->getLastModified()); break;
+					case '{DAV:}getlastmodified'       :
+						if ($node->getLastModified()){
+							$newProperties[200][$prop] =
+							new \Sabre\DAV\Property\GetLastModified($node->getLastModified());
+						}
+						break;
 					case '{DAV:}getcontentlength'      :
 						if ($node instanceof \Sabre\DAV\IFile) {
 							$size = $node->getSize();
@@ -399,6 +464,19 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 							if ($node instanceof $className) $newProperties[200]['{DAV:}resourcetype']->add($resourceType);
 						}
 						break;
+					//case '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite' :
+						//OC_Log::write('chooser','FAVORITE REQUEST --> '.$myPath, OC_Log::WARN);
+						// We don't care about group folders or shared files as these
+						// are anyway not accessible to the sync clients.
+						// Not necessary - we set the property when setting bookmark (and vice versa)
+						/*if(\OCP\App::isEnabled('internal_bookmarks')){
+							require_once 'apps/internal_bookmarks/lib/intbks.class.php';
+							$bookmark = \OC_IntBks::getItemByTarget('/'.rtrim($myPath, '/'));
+							if(!empty($bookmark)){
+								$newProperties[200][$prop] = 1;
+							}
+						}*/
+						//break;
 
 				}
 
