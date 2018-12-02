@@ -221,19 +221,20 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		}
 		if($this->favoriteSearch){
 			$user = \OCP\USER::getUser();
-			$data = str_replace('<d:href>/remote.php/mydav/',
-					'<d:href>/remote.php/dav/files/'.$user.'/', $data);
+			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/mydav/',
+					'<d:href>'.OC::$WEBROOT.'/remote.php/dav/files/'.$user.'/', $data);
 			$data = str_replace('<d:href>', "<d:status>HTTP/1.1 200 OK</d:status>\n<d:href>", $data);
-			$data = str_replace('<d:href>/remote.php/dav/files/'.$user.'/%40%40/',
-					'<d:href>/remote.php/dav/files/'.$user.'/@@/', $data);
+			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/dav/files/'.$user.'/%40%40/',
+					'<d:href>'.OC::$WEBROOT.'/remote.php/dav/files/'.$user.'/@@/', $data);
 		}
 		if($this->mediaSearch){
 			$user = \OCP\USER::getUser();
-			$data = str_replace('<d:href>/remote.php/mydav/', '<d:href>/remote.php/dav/files/'.
+			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/mydav/', '<d:href>'.OC::$WEBROOT.'/remote.php/dav/files/'.
 					$user.'/', $data);
 		}
 		if($this->tree->usage){
-			$data = str_replace('<d:href>/remote.php/usage', '<d:href>/remote.php/usage/remote.php/webdav', $data);
+			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/usage',
+					'<d:href>'.OC::$WEBROOT.'/remote.php/usage/remote.php/webdav', $data);
 		}
 		$this->httpResponse->sendBody($data);
 
