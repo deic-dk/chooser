@@ -228,6 +228,14 @@ if(!empty($_SERVER['BASE_URI'])){
 		}
 		$userServerAccess = \OCA\FilesSharding\Lib::$USER_ACCESS_READ_ONLY;
 	}
+	if($_SERVER['BASE_URI']==OC::$WEBROOT."/remote.php/group"){
+		if(strpos(rtrim($_SERVER['REQUEST_URI'],'/'), OC::$WEBROOT."/remote.php/group/remote.php/webdav")===0){
+			$objectTree->group = true;
+			$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/remote.php/group/remote.php/webdav|",
+					OC::$WEBROOT."/remote.php/group", $_SERVER['REQUEST_URI']);
+		}
+		$userServerAccess = \OCA\FilesSharding\Lib::$USER_ACCESS_READ_ONLY;
+	}
 	$server->setBaseUri($_SERVER['BASE_URI']);
 }
 
