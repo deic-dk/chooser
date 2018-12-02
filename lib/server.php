@@ -232,7 +232,9 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 			$data = str_replace('<d:href>/remote.php/mydav/', '<d:href>/remote.php/dav/files/'.
 					$user.'/', $data);
 		}
-		
+		if($this->tree->usage){
+			$data = str_replace('<d:href>/remote.php/usage', '<d:href>/remote.php/usage/remote.php/webdav', $data);
+		}
 		$this->httpResponse->sendBody($data);
 
 	}

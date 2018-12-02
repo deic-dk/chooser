@@ -13,6 +13,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	public $sharingOut = false;
 	public $sharingInOut = false;
 	public $favorites = false;
+	public $usage = false;
 	private $auth_user;
 	
 	public function fixPath(&$path){

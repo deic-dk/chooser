@@ -220,6 +220,14 @@ $_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/davs|",
 
 if(!empty($_SERVER['BASE_URI'])){
 	// Accept include from remote.php from other apps and set root accordingly
+	if($_SERVER['BASE_URI']==OC::$WEBROOT."/remote.php/usage"){
+		if(strpos(rtrim($_SERVER['REQUEST_URI'],'/'), OC::$WEBROOT."/remote.php/usage/remote.php/webdav")===0){
+			$objectTree->usage = true;
+			$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/remote.php/usage/remote.php/webdav|",
+					OC::$WEBROOT."/remote.php/usage", $_SERVER['REQUEST_URI']);
+		}
+		$userServerAccess = \OCA\FilesSharding\Lib::$USER_ACCESS_READ_ONLY;
+	}
 	$server->setBaseUri($_SERVER['BASE_URI']);
 }
 
@@ -260,6 +268,10 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 		if(!empty($_SERVER['BASE_DIR'])){
 			OC_Log::write('chooser','Non-files access: '.$_SERVER['REQUEST_URI'].
 					'-->'.$_SERVER['BASE_DIR'], OC_Log::WARN);
+			$user = \OC_User::getUser();
+			if(empty($user)){
+				$user = $_SERVER['PHP_AUTH_USER'];
+			}
 			\OC\Files\Filesystem::tearDown();
 			\OC\Files\Filesystem::init($user, $_SERVER['BASE_DIR']);
 			$view = new \OC\Files\View($_SERVER['BASE_DIR']);
