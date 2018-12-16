@@ -77,7 +77,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 	protected function httpSearch($uri) {
 		$this->mediaSearch = true;
 		$xml = $this->httpRequest->getBody(true);
-		OC_Log::write('chooser','XML: '.$xml, OC_Log::WARN);
+		OC_Log::write('chooser','Media search XML: '.$xml, OC_Log::WARN);
 		$xml = preg_replace('/&(?!#?[a-z0-9]+;)/', '&amp;', $xml);
 		$parsed = simplexml_load_string($xml);
 		$parsed = dom_import_simplexml($parsed);
@@ -153,7 +153,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 	private $favoriteSearch = false;
 	protected function httpReport($uri) {
 		$xml = $this->httpRequest->getBody(true);
-		OC_Log::write('chooser','XML: '.$xml, OC_Log::WARN);
+		OC_Log::write('chooser','Favorite search XML: '.$xml, OC_Log::WARN);
 		$xml = preg_replace('/&(?!#?[a-z0-9]+;)/', '&amp;', $xml);
 		$parsed = simplexml_load_string($xml);
 		$parsed = dom_import_simplexml($parsed);

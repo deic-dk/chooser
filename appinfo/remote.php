@@ -97,7 +97,9 @@ if(empty($user)){
 
 // TODO: more thorough check. Currently the favorites call from iOS
 // seems to be the only one using REPORT. We can't rely on that in the future.
-if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
+if($_SERVER['REQUEST_URI']==OC::$WEBROOT."/remote.php/dav/files/".
+		$user ||
+		strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
 		$user."/")===0 &&
 		strtolower($_SERVER['REQUEST_METHOD'])=='report'){
 	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
