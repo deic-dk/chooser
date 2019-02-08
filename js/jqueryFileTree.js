@@ -55,7 +55,13 @@ if(jQuery) (function($){
 			if( o.selectFile == undefined ) o.selectFile = false;
 			if( o.selectFolder == undefined ) o.selectFolder = false;
 			if( o.loadMessage == undefined ) o.loadMessage = 'Loading...';
-
+			if( o.dialogClass != undefined ) {
+				o.dialog = $(o.dialogClass);
+			}
+			else{
+				o.dialog = $('#dialog0');
+			}
+					 
 			hh = hh || function(file) {
 				//alert("doubleclick");
 			};
@@ -96,7 +102,7 @@ if(jQuery) (function($){
 			function showTree(c, t) {
 				$(c).addClass('wait');
 				$(".jqueryFileTree.start").remove();
-				$.post(o.script, { dir: t, group: o.group }, function(data) {
+				$.post(o.script, { dir: t, group: o.group, showFiles: o.showFiles }, function(data) {
 					$(c).find('.start').html('');
 					$(c).removeClass('wait').append(data);
 					if( o.root == t ) $(c).find('UL:hidden').show(); else $(c).find('UL:hidden').slideDown({ duration: o.expandSpeed, easing: o.expandEasing });
@@ -124,16 +130,16 @@ if(jQuery) (function($){
 					if(!foundFolder && o.folder != '' && $(this).attr('rel') === o.folder+'/') {
 						treeAction($(this));
 						foundFolder = true;
-						// Scoll to folder
+						// Scroll to folder
 						if(o.file==''){
-							$('#dialog0').animate({
-							   scrollTop: $(this).offset().top - $('#dialog0').offset().top
+							o.dialog.animate({
+								scrollTop: $(this).offset().top - o.dialog.offset().top
 							}, 2000);
 						}
 					}
 					else if(o.file!='' && $(this).attr('rel') === o.file){
-						$('#dialog0').animate({
-						   scrollTop: $(this).offset().top - $('#dialog0').offset().top
+						o.dialog.animate({
+							scrollTop: $(this).offset().top - o.dialog.offset().top
 						}, 2000);
 					}
 				});

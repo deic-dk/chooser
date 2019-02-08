@@ -53,7 +53,6 @@ foreach( \OC\Files\Filesystem::getDirectoryContent( $_POST['dir'] ) as $i ) {
 echo "<ul class=\"jqueryFileTree\" style=\"display: none;\">";
 // All dirs
 foreach( $files as $file ) {
-
 	$path = $_POST['dir'].$file['name'];
 	$path = preg_replace('/^\//', '', $path);
 	if(\OC\Files\Filesystem::is_dir($path) || $file['mimetype'] == 'httpd/unix-directory') {
@@ -64,7 +63,8 @@ foreach( $files as $file ) {
 foreach( $files as $file ) {
 	$path = $_POST['dir'].$file['name'];
 	$path = preg_replace('/^\//', '', $path);
-	if(!\OC\Files\Filesystem::is_dir($path) && $file['mimetype'] != 'httpd/unix-directory') {
+	if(!\OC\Files\Filesystem::is_dir($path) && $file['mimetype'] != 'httpd/unix-directory' &&
+		(empty($_POST['showFiles']) || $_POST['showFiles']!='no')) {
 		$ext = preg_replace('/^.*\./', '', $path);
 		echo "<li class=\"file ext_$ext\"><a href=\"#\" rel=\"" . $path . "\">" . htmlentities($path) . "</a></li>";
 	}
