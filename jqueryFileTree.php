@@ -50,10 +50,20 @@ foreach( \OC\Files\Filesystem::getDirectoryContent( $_POST['dir'] ) as $i ) {
 	$files[] = $i;
 }
 
+// Default to true
+$showRoot = empty($_POST['showRoot']) || $_POST['showRoot']!='false' && $_POST['showRoot']!='no';
+// Default to true
+$showHidden = empty($_POST['showHidden']) || $_POST['showHidden']!='false' && $_POST['showHidden']!='no';
+// Default to true
+$showFiles = empty($_POST['showFiles']) || $_POST['showFiles']!='false' && $_POST['showFiles']!='no';
+
 echo "<ul class=\"jqueryFileTree\" style=\"display: none;\">";
 // All dirs
 foreach( $files as $file ) {
-	$path = $_POST['dir'].$file['name'];
+	if(!$showHidden && strpos($file['name'], '.')===0){
+		continue;
+	}
+	$path = ($showRoot?rtrim($_POST['dir'], '/'):'').'/'.ltrim($file['name'], '/');
 	$path = preg_replace('/^\//', '', $path);
 	if(\OC\Files\Filesystem::is_dir($path) || $file['mimetype'] == 'httpd/unix-directory') {
 		echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . $path . "/\">" . htmlentities($path) . "</a></li>";
@@ -61,10 +71,13 @@ foreach( $files as $file ) {
 }
 // All files
 foreach( $files as $file ) {
-	$path = $_POST['dir'].$file['name'];
+	if(!$showHidden && strpos($file['name'], '.')===0){
+		continue;
+	}
+	$path = ($showRoot?rtrim($_POST['dir'], '/'):'').'/'.ltrim($file['name'], '/');
 	$path = preg_replace('/^\//', '', $path);
 	if(!\OC\Files\Filesystem::is_dir($path) && $file['mimetype'] != 'httpd/unix-directory' &&
-		(empty($_POST['showFiles']) || $_POST['showFiles']!='no')) {
+			$showFiles) {
 		$ext = preg_replace('/^.*\./', '', $path);
 		echo "<li class=\"file ext_$ext\"><a href=\"#\" rel=\"" . $path . "\">" . htmlentities($path) . "</a></li>";
 	}
