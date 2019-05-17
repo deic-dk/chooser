@@ -56,6 +56,8 @@ $showRoot = empty($_POST['showRoot']) || $_POST['showRoot']!='false' && $_POST['
 $showHidden = empty($_POST['showHidden']) || $_POST['showHidden']!='false' && $_POST['showHidden']!='no';
 // Default to true
 $showFiles = empty($_POST['showFiles']) || $_POST['showFiles']!='false' && $_POST['showFiles']!='no';
+// Default to false
+$deleteIcons =!empty($_POST['deleteIcons']) && ($_POST['deleteIcons']=='true' || $_POST['deleteIcons']=='yes');
 
 echo "<ul class=\"jqueryFileTree\" style=\"display: none;\">";
 // All dirs
@@ -63,10 +65,14 @@ foreach( $files as $file ) {
 	if(!$showHidden && strpos($file['name'], '.')===0){
 		continue;
 	}
-	$path = ($showRoot?rtrim($_POST['dir'], '/'):'').'/'.ltrim($file['name'], '/');
+	$path = rtrim($_POST['dir'], '/').'/'.ltrim($file['name'], '/');
+	$showPath = ($showRoot?rtrim($_POST['dir'], '/'):'').'/'.ltrim($file['name'], '/');
 	$path = preg_replace('/^\//', '', $path);
+	$showPath = preg_replace('/^\//', '', $showPath);
 	if(\OC\Files\Filesystem::is_dir($path) || $file['mimetype'] == 'httpd/unix-directory') {
-		echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . $path . "/\">" . htmlentities($path) . "</a></li>";
+		echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . $path . "/\">" . htmlentities($showPath) .
+					($deleteIcons?"<span class=\"icon-cancel-circled delete_folder\"></span>":"")."</a>".
+		"</li>";
 	}
 }
 // All files
@@ -74,8 +80,10 @@ foreach( $files as $file ) {
 	if(!$showHidden && strpos($file['name'], '.')===0){
 		continue;
 	}
-	$path = ($showRoot?rtrim($_POST['dir'], '/'):'').'/'.ltrim($file['name'], '/');
+	$path = rtrim($_POST['dir'], '/').'/'.ltrim($file['name'], '/');
+	$showPath = ($showRoot?rtrim($_POST['dir'], '/'):'').'/'.ltrim($file['name'], '/');
 	$path = preg_replace('/^\//', '', $path);
+	$showPath = preg_replace('/^\//', '', $showPath);
 	if(!\OC\Files\Filesystem::is_dir($path) && $file['mimetype'] != 'httpd/unix-directory' &&
 			$showFiles) {
 		$ext = preg_replace('/^.*\./', '', $path);
