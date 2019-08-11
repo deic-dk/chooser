@@ -68,11 +68,21 @@ OC_Util::obEnd();
 // Create ownCloud Dir
 //$rootDir = new OC_Connector_Sabre_Directory('');
 //$objectTree = new \OC\Connector\Sabre\ObjectTree($rootDir);
-$objectTree = new Share_ObjectTree();
+if(empty($_SERVER['OBJECT_TREE'])){
+	$objectTree = new Share_ObjectTree();
+}
+else{
+	$objectTree = new $_SERVER['OBJECT_TREE']();
+}
 //$objectTree = new \OC\Connector\Sabre\ObjectTree();
 
 //$server = new Sabre_DAV_Server($rootDir);
-$server = new OC_Connector_Sabre_Server_chooser($objectTree);
+if(empty($_SERVER['DAV_SERVER'])){
+	$server = new OC_Connector_Sabre_Server_chooser($objectTree);
+}
+else{
+	$server = new $_SERVER['DAV_SERVER']($objectTree);
+}
 
 $requestBackend = new OC_Connector_Sabre_Request();
 $server->httpRequest = $requestBackend;
@@ -257,6 +267,10 @@ if(!empty($_SERVER['HTTP_DESTINATION'])){
 			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['HTTP_DESTINATION']);
 	OC_Log::write('chooser','DESTINATION: '.$_SERVER['HTTP_DESTINATION'], OC_Log::WARN);}
 
+//if(method_exists($objectTree, 'updateMeta')){
+//	$server->subscribeEvent('afterWriteContent', array($objectTree, 'updateMeta'));
+//}
+
 // wait with registering these until auth is handled and the filesystem is setup
 $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 	
@@ -276,12 +290,12 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 	}
 	else{
 		if(!empty($_SERVER['BASE_DIR'])){
-			OC_Log::write('chooser','Non-files access: '.$_SERVER['REQUEST_URI'].
-					'-->'.$_SERVER['BASE_DIR'], OC_Log::WARN);
 			$user = \OC_User::getUser();
 			if(empty($user)){
 				$user = $_SERVER['PHP_AUTH_USER'];
 			}
+			OC_Log::write('chooser','Non-files access: '.$user.': '.$_SERVER['REQUEST_URI'].
+					'-->'.$_SERVER['BASE_DIR'], OC_Log::WARN);
 			\OC\Files\Filesystem::tearDown();
 			\OC\Files\Filesystem::init($user, $_SERVER['BASE_DIR']);
 			$view = new \OC\Files\View($_SERVER['BASE_DIR']);

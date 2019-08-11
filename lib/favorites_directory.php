@@ -67,7 +67,6 @@ class OC_Connector_Sabre_Favorites_Directory extends OC_Connector_Sabre_Node
 		$nodes = array();
 		$bookmarks = \OC_IntBks::getAllItemsByUser();
 		\OC_Log::write('chooser','Getting children...'.$user.'-->'.serialize($bookmarks), \OC_Log::WARN);
-		$uris = array();
 		foreach($bookmarks as $bookmark){
 			$target = parse_url('https://localhost'.preg_replace('|^([^&]+)&|', '$1?', $bookmark['bktarget']));
 			OC_Log::write('chooser','Target: '.serialize($target), OC_Log::WARN);

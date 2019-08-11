@@ -216,7 +216,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 
 		$data = $this->generateMultiStatus($newProperties, $minimal);
 		
-		if($this->tree->sharingInOut){
+		if(!empty($this->tree->sharingInOut) && $this->tree->sharingInOut){
 			$data = str_replace('<d:href>/sharingout/', '<d:href>/sharingin/', $data);
 		}
 		if($this->favoriteSearch){
@@ -232,11 +232,11 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/mydav/', '<d:href>'.OC::$WEBROOT.'/remote.php/dav/files/'.
 					$user.'/', $data);
 		}
-		if($this->tree->usage){
+		if(!empty($this->tree->usage) && $this->tree->usage){
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/usage',
 					'<d:href>'.OC::$WEBROOT.'/remote.php/usage/remote.php/webdav', $data);
 		}
-		if($this->tree->group){
+		if(!empty($this->tree->group) && $this->tree->group){
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/group',
 					'<d:href>'.OC::$WEBROOT.'/remote.php/group/remote.php/webdav', $data);
 		}
@@ -333,8 +333,8 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		elseif($depth==1 && !empty($parentNode) && $parentNode instanceof \Sabre\DAV\ICollection) {
 			$children = $this->tree->getChildren($path);
 			foreach($children as $childNode){
-				OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName().":".$this->tree->sharingIn,
-						OC_Log::INFO);
+				OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName().":".
+						(empty($this->tree->sharingIn)?'':$this->tree->sharingIn), OC_Log::INFO);
 				if($this->excludePath($path . '/' . $childNode->getName())){
 					continue;
 				}
