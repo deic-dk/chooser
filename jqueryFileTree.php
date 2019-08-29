@@ -34,7 +34,7 @@ if(OCP\App::isEnabled('user_group_admin')){
 	}
 }
 
-$_POST['dir'] = urldecode($_POST['dir']);
+//$_POST['dir'] = urldecode($_POST['dir']);
 OC_Log::write('chooser','Listing: '.$_POST['dir'], OC_Log::WARN);
 if( $_POST['dir']!= '' && !\OC\Files\Filesystem::file_exists($_POST['dir']) ) {
 	exit;
