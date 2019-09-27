@@ -70,8 +70,10 @@ foreach( $files as $file ) {
 	$path = preg_replace('/^\//', '', $path);
 	$showPath = preg_replace('/^\//', '', $showPath);
 	if(\OC\Files\Filesystem::is_dir($path) || $file['mimetype'] == 'httpd/unix-directory') {
-		echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . $path . "/\">" . htmlentities($showPath) .
-					($deleteIcons?"<span class=\"icon-cancel-circled delete_folder\"></span>":"")."</a>".
+		echo "<li class=\"directory collapsed\"><a href=\"#\" rel=\"" . $path . "/\">" .
+			htmlentities($showPath) .
+			"<span class=\"icon-angle-right expand_folder\"></span>" .
+			($deleteIcons?"<span class=\"icon-cancel-circled delete_folder\"></span>":"")."</a>".
 		"</li>";
 	}
 }

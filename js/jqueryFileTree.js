@@ -83,10 +83,12 @@ if(jQuery) (function($){
 						t.parent().find('UL').remove(); // cleanup
 						showTree( t.parent(), t.attr('rel') );
 						t.parent().removeClass('collapsed').addClass('expanded');
+						t.parent().find('a span.expand_folder').removeClass('icon-angle-right').addClass('icon-angle-down');
 					} else {
 						// Collapse
 						t.parent().find('UL').slideUp({ duration: o.collapseSpeed, easing: o.collapseEasing });
 						t.parent().removeClass('expanded').addClass('collapsed');
+						t.parent().find('a span.expand_folder').removeClass('icon-angle-down').addClass('icon-angle-right');
 					}
 				}
 
