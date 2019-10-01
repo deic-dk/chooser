@@ -245,5 +245,44 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 		return $node;
 
 	}
+	
+	// This is here to fix an ownCloud race condition bug:
+	
+	/*
+	 Server.php: httpMove() : tree->move()
+	
+	objecttree.php: move() : fileView->rename()
+	
+	view.php: storage->rename()
+	
+	view.php: rename() : updater->rename()
+	
+	updater.php: rename() : $cache->move()
+	
+	BUT:
+	
+	BEFORE $cache->move(), something triggers
+	
+	WHICH somehow triggers watcher.php: checkUpdate($source)
+	WHICH calls scanner->scan()
+	WHICH calls scanner.php: scanChildren(), removeFromCache()
+	
+	Well, actually it's triggered by another webdav call (PROPFIND).
+	So it's an ownCloud bug.
+	
+	Notice that scanner.php has been hacked to check the flagging.
+	
+	*/
+	
+	public function move($sourcePath, $destinationPath) {
+		$user_id = \OCP\User::getUser();
+		$info = $this->fileView->getFileInfo($sourcePath);
+		if(!empty($user_id) && !empty($user_id) && !empty($info)){
+			\OCP\Util::writeLog('Notes', 'Flagging source as dirty -->'.$info->getInternalPath(), \OCP\Util::WARN);
+			apc_store(\OC_Chooser::$MOVING_CACHE_PREFIX.$user_id.':'.$info->getInternalPath(), '1',
+					10*60 /*give 10 minutes to move*/);
+		}
+		return parent::move($sourcePath, $destinationPath);
+	}
 
 }

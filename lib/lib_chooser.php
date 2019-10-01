@@ -9,6 +9,7 @@ class OC_Chooser {
 	private static $IPS_CACHE_KEY = 'compute_ips';
 	
 	public static $MAX_CERTS = 10;
+	public static $MOVING_CACHE_PREFIX = 'moving_';
 	
 	private static function loadNetValues(){
 		if(self::$trustednets===null){
