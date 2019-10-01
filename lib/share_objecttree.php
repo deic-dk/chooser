@@ -277,8 +277,8 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	public function move($sourcePath, $destinationPath) {
 		$user_id = \OCP\User::getUser();
 		$info = $this->fileView->getFileInfo($sourcePath);
-		if(!empty($user_id) && !empty($user_id) && !empty($info)){
-			\OCP\Util::writeLog('Notes', 'Flagging source as dirty -->'.$info->getInternalPath(), \OCP\Util::WARN);
+		if(!empty($user_id) && !empty($info)){
+			\OCP\Util::writeLog('Notes', 'Flagging source being moved -->'.$info->getInternalPath(), \OCP\Util::WARN);
 			apc_store(\OC_Chooser::$MOVING_CACHE_PREFIX.$user_id.':'.$info->getInternalPath(), '1',
 					10*60 /*give 10 minutes to move*/);
 		}
