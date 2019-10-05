@@ -39,6 +39,7 @@ class OC_Connector_Sabre_Sharingout_Directory extends OC_Connector_Sabre_Node
 	 */
 	public function getChild($name, $info=null) {
 		if(is_null($info) || !$info){
+			\OC_Log::write('chooser','Could not find '.$name, \OC_Log::ERROR);
 			throw new \Sabre\DAV\Exception\NotFound('Need more info!');
 		}
 		$this->fileView = new OC_Remote_View();
@@ -46,6 +47,7 @@ class OC_Connector_Sabre_Sharingout_Directory extends OC_Connector_Sabre_Node
 			\OC_Log::write('chooser','Returning OC_Connector_Sabre_Directory '.$name.':'.$info['fileid'], \OC_Log::WARN);
 			$node = new OC_Connector_Sabre_Directory($this->fileView, $info);
 		} else {
+			\OC_Log::write('chooser','Returning OC_Connector_Sabre_File '.$name.':'.$info['fileid'], \OC_Log::WARN);
 			$node = new OC_Connector_Sabre_File($this->fileView, $info);
 		}
 		return $node;

@@ -126,13 +126,13 @@ elseif(strpos(urldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/")===0){
 	$baseuri = OC::$WEBROOT."/sharingin";
 	$objectTree->sharingIn = true;
-	$objectTree->allowUpload = false;
+	//$objectTree->allowUpload = false;
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
 		$user."/@@/sharingin/")===0){
 			$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user."/@@/sharingin";
 		$objectTree->sharingIn = true;
-		$objectTree->allowUpload = false;
+		//$objectTree->allowUpload = false;
 		$favoriteLink = true;
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingout/")===0){

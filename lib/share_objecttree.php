@@ -133,7 +133,16 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 							stripos($_SERVER['HTTP_USER_AGENT'], "cyberduck")===false?
 							'/sharingout/'.$path:
 							'/sharingout/@@/'.$path);
-					OC_Log::write('chooser','Redirecting sharingin target '.$path.' to '.$share['uid_owner'].'-->'.$redirect, OC_Log::WARN);
+					// httpMkcol and httpPut call getNodeForPath on parent
+						if((strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' ||
+									strtolower($_SERVER['REQUEST_METHOD'])=='put') &&
+						basename($_SERVER['REQUEST_URI'])!=basename($path) &&
+						basename(dirname($_SERVER['REQUEST_URI']))==basename($path)){
+						$redirect = $redirect.'/'.basename($_SERVER['REQUEST_URI']);
+					}
+					$testEx = new \Exception();
+					OC_Log::write('chooser','Redirecting sharingin target '.$path.' to '.
+					$share['uid_owner'].'-->'.$redirect.' : '.$testEx->getTraceAsString(), OC_Log::WARN);
 					\OC_Response::redirect($redirect);
 					exit();
 				}
@@ -195,7 +204,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 															'/'.$share['uid_owner'].'/files');
 					$this->fileView = \OC\Files\Filesystem::getView();
 					OC_Log::write('chooser','Using view '.$share['path'].':'.$path.':'.$filepath.':'.
-							$info->getType().':'.$info->getPermissions(), OC_Log::WARN);
+							$info->getType().':'.$info->getPermissions().':'.$found.':'.$shareeRoot, OC_Log::WARN);
 					break;
 				}
 			}
@@ -233,7 +242,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			throw new \Sabre\DAV\Exception\NotFound('File with name ' . $filepath . ' could not be located');
 		}
 		
-		OC_Log::write('chooser','Returning Sabre '.$info->getType().': '.$info->getPath(), OC_Log::INFO);
+		OC_Log::write('chooser','Returning Sabre '.$info->getType().': '.$info->getPath(), OC_Log::WARN);
 		
 		if ($info->getType() === 'dir') {
 			$node = new \OC_Connector_Sabre_Directory($this->fileView, $info);
