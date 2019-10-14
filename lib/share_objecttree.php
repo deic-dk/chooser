@@ -68,7 +68,8 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 		
 		if($this->allowUpload==false &&
 		(strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' || strtolower($_SERVER['REQUEST_METHOD'])=='put' ||
-		strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
+				strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='copy' ||
+				strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
 		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch')){
 			throw new \Sabre\DAV\Exception\Forbidden($_SERVER['REQUEST_METHOD'].' not allowed. '.$this->allowUpload);
 		}
@@ -134,14 +135,16 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 							'/sharingout/'.$path:
 							'/sharingout/@@/'.$path);
 					// httpMkcol and httpPut call getNodeForPath on parent
-						if((strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' ||
-									strtolower($_SERVER['REQUEST_METHOD'])=='put') &&
+					if((strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' ||
+								strtolower($_SERVER['REQUEST_METHOD'])=='put' ||
+								strtolower($_SERVER['REQUEST_METHOD'])=='move' ||
+								strtolower($_SERVER['REQUEST_METHOD'])=='copy') &&
 						basename($_SERVER['REQUEST_URI'])!=basename($path) &&
 						basename(dirname($_SERVER['REQUEST_URI']))==basename($path)){
 						$redirect = $redirect.'/'.basename($_SERVER['REQUEST_URI']);
 					}
 					$testEx = new \Exception();
-					OC_Log::write('chooser','Redirecting sharingin target '.$path.' to '.
+					OC_Log::write('chooser','Redirecting sharingin target '.$_SERVER['REQUEST_URI'].' : '.$path.' to '.
 					$share['uid_owner'].'-->'.$redirect.' : '.$testEx->getTraceAsString(), OC_Log::WARN);
 					\OC_Response::redirect($redirect);
 					exit();
@@ -196,15 +199,20 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 					$info = \OCA\FilesSharding\Lib::getFileInfo($sharepath.$filepath, $share['uid_owner'],
 							/*$share['item_source']*//*Nope - don't use the ID of the shared folder*/'',
 							'', $this->auth_user, $group);
+					if(empty($info)){
+						throw new \Sabre\DAV\Exception\NotFound('File with name ' . $sharepath.$filepath . ' could not be located.');
+					}
 					\OC_Util::teardownFS();
 					\OC_User::setUserId($share['uid_owner']);
 					\OC_Util::setupFS($share['uid_owner']);
-					\OC\Files\Filesystem::init($share['uid_owner'],
-							!empty($group)?'/'.$share['uid_owner'].'/user_group_admin/'.$group:
-															'/'.$share['uid_owner'].'/files');
+					$root = !empty($group)?'/'.$share['uid_owner'].'/user_group_admin/'.$group.'/'.$sharepath:
+					'/'.$share['uid_owner'].'/files/'.$sharepath;
+					\OC\Files\Filesystem::init($share['uid_owner'], $root);
 					$this->fileView = \OC\Files\Filesystem::getView();
-					OC_Log::write('chooser','Using view '.$share['path'].':'.$path.':'.$filepath.':'.
-							$info->getType().':'.$info->getPermissions().':'.$found.':'.$shareeRoot, OC_Log::WARN);
+					$this->fileView->chroot($root);
+					//$_SERVER['REQUEST_URI'] = preg_replace("|^/sharingout/".$share['uid_owner'].'/'.$sharename."|", "", $_SERVER['REQUEST_URI']);
+					OC_Log::write('chooser','Using view '.$sharepath.':'.$filepath.':'.$_SERVER['REQUEST_URI'].':'.
+							$info->getType().':'.$info->getPermissions().':'.$found.':'.$shareeRoot.':'.$this->fileView->getRoot(), OC_Log::WARN);
 					break;
 				}
 			}
@@ -242,7 +250,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			throw new \Sabre\DAV\Exception\NotFound('File with name ' . $filepath . ' could not be located');
 		}
 		
-		OC_Log::write('chooser','Returning Sabre '.$info->getType().': '.$info->getPath(), OC_Log::WARN);
+		OC_Log::write('chooser','Returning Sabre '.$info->getType().': '.$path.' : '.$info->getPath(), OC_Log::WARN);
 		
 		if ($info->getType() === 'dir') {
 			$node = new \OC_Connector_Sabre_Directory($this->fileView, $info);
@@ -285,13 +293,74 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	
 	public function move($sourcePath, $destinationPath) {
 		$user_id = \OCP\User::getUser();
+		if(isset($this->sharingOut) && $this->sharingOut){
+			// Strip off /[owner]/[sharename]. The root of $this->fileView has been set to [sharepath].
+			$sourcePath = preg_replace('|^[^/]+/[^/]+/|', '/', $sourcePath);
+			$destinationPath = preg_replace('|^[^/]+/[^/]+/|', '/', $destinationPath);
+		}
+		\OCP\Util::writeLog('Chooser', 'Checking source being moved: '.$sourcePath.' --> '.
+				$destinationPath.' :: '.$this->fileView->getRoot().' :: '.$_SERVER['REQUEST_URI'].' --> '.
+				(empty($_SERVER['HTTP_DESTINATION'])?'':$_SERVER['HTTP_DESTINATION']), \OCP\Util::WARN);
 		$info = $this->fileView->getFileInfo($sourcePath);
 		if(!empty($user_id) && !empty($info)){
-			\OCP\Util::writeLog('Notes', 'Flagging source being moved -->'.$info->getInternalPath(), \OCP\Util::WARN);
+			\OCP\Util::writeLog('Chooser', 'Flagging source being moved: '.$info->getInternalPath().' --> '.
+					$destinationPath, \OCP\Util::WARN);
 			apc_store(\OC_Chooser::$MOVING_CACHE_PREFIX.$user_id.':'.$info->getInternalPath(), '1',
 					10*60 /*give 10 minutes to move*/);
 		}
-		return parent::move($sourcePath, $destinationPath);
+		if(isset($this->sharingOut) && $this->sharingOut){
+			// We bypass the mountmanager stuff - permissions have been checked
+			if(\OC\Files\Filesystem::file_exists($destinationPath)){
+				throw new \Sabre\DAV\Exception\Forbidden('File exists');
+			}
+			$renameOkay = $this->fileView->rename($sourcePath, $destinationPath);
+			if(!$renameOkay){
+			 	throw new \Sabre\DAV\Exception\Forbidden('');
+			}
+			$query = \OC_DB::prepare('UPDATE `*PREFIX*properties` SET `propertypath` = ?'.
+				' WHERE `userid` = ? AND `propertypath` = ?');
+			$query->execute(array(\OC\Files\Filesystem::normalizePath($destinationPath), \OC_User::getUser(),
+			\OC\Files\Filesystem::normalizePath($sourcePath)));
+			list($sourceDir,) = \Sabre\DAV\URLUtil::splitPath($sourcePath);
+			list($destinationDir,) = \Sabre\DAV\URLUtil::splitPath($destinationPath);
+			$this->markDirty($sourceDir);
+			$this->markDirty($destinationDir);
+		}
+		else{
+			return parent::move($sourcePath, $destinationPath);
+		}
+	}
+	
+	public function copy($source, $destination) {
+		if(isset($this->sharingOut) && $this->sharingOut){
+			// Strip off /[owner]/[sharename]. The root of $this->fileView has been set to [sharepath].
+			$source = preg_replace('|^[^/]+/[^/]+/|', '/', $source);
+			$destination = preg_replace('|^[^/]+/[^/]+/|', '/', $destination);
+			try{
+				if ($this->fileView->is_file($source)) {
+					$this->fileView->copy($source, $destination);
+				}
+				else{
+					$this->fileView->mkdir($destination);
+					$dh = $this->fileView->opendir($source);
+					if (is_resource($dh)) {
+						while (($subNode = readdir($dh)) !== false) {
+							if ($subNode == '.' || $subNode == '..') continue;
+							$this->copy($source . '/' . $subNode, $destination . '/' . $subNode);
+						}
+					}
+				}
+			}
+			catch (\OCP\Files\StorageNotAvailableException $e) {
+				throw new \Sabre\DAV\Exception\ServiceUnavailable($e->getMessage());
+			}
+			
+			list($destinationDir,) = \Sabre\DAV\URLUtil::splitPath($destination);
+			$this->markDirty($destinationDir);
+		}
+		else{
+			return parent::copy($source, $destination);
+		}
 	}
 
 }

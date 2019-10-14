@@ -88,7 +88,8 @@ class OC_Chooser {
 				
 				// Block write operations from backup servers (cmd-line sync client mess-up)
 				if((strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' || strtolower($_SERVER['REQUEST_METHOD'])=='put' ||
-						strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
+						strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='copy' ||
+						strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
 						strtolower($_SERVER['REQUEST_METHOD'])=='proppatch') &&
 						!empty($_SERVER['HTTP_USER_AGENT']) &&
 						stripos($_SERVER['HTTP_USER_AGENT'], "mirall")!==false &&

@@ -267,8 +267,14 @@ if(!empty($_SERVER['HTTP_DESTINATION'])){
 	// Accept include by remote.php from files_sharding.
 	$_SERVER['HTTP_DESTINATION'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/davs|",
 			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['HTTP_DESTINATION']);
+	// Support redirects
+	if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingout/")===0){
+		$_SERVER['HTTP_DESTINATION'] = preg_replace("|^(https*://)([^/]+)".OC::$WEBROOT."/sharingin/|",
+				"$1".$_SERVER['HTTP_HOST'].OC::$WEBROOT."/sharingout/", $_SERVER['HTTP_DESTINATION']);
+	}
 	OC_Log::write('chooser','URI: '.$_SERVER['REQUEST_URI'].'. DESTINATION: '.
-			$_SERVER['HTTP_DESTINATION'], OC_Log::WARN);}
+			$_SERVER['HTTP_DESTINATION'], OC_Log::WARN);
+}
 
 //if(method_exists($objectTree, 'updateMeta')){
 //	$server->subscribeEvent('afterWriteContent', array($objectTree, 'updateMeta'));
@@ -349,7 +355,8 @@ if(\OCP\App::isEnabled('files_sharding')){
 if(\OCP\App::isEnabled('files_sharding') &&
 		$userServerAccess==\OCA\FilesSharding\Lib::$USER_ACCESS_READ_ONLY &&
 		(strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' || strtolower($_SERVER['REQUEST_METHOD'])=='put' ||
-		strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
+				strtolower($_SERVER['REQUEST_METHOD'])=='move' || strtolower($_SERVER['REQUEST_METHOD'])=='copy' ||
+				strtolower($_SERVER['REQUEST_METHOD'])=='delete' ||
 		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch')){
 	$ok = false;
 }
