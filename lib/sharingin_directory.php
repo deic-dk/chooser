@@ -67,7 +67,8 @@ class OC_Connector_Sabre_Sharingin_Directory extends OC_Connector_Sabre_Node
 					continue;
 				}
 				$owners[] = $share['uid_owner'];
-				$info = new \OC\Files\FileInfo($share['uid_owner'], \OC\Files\Filesystem::getStorage('/'),
+				$info = new \OC\Files\FileInfo($share['uid_owner'],
+						\OC\Files\Filesystem::getStorage('/'.$share['uid_owner'].'/'),
 						$share['uid_owner'], array('fileid'=>-1, 'permissions'=>1, 'mimetype'=>'httpd/unix-directory',
 								'size'=>0, 'etag'=>'', 'mtime'=>$share['stime']));
 						OC_Log::write('chooser','Getting child '.$share['uid_owner'], OC_Log::WARN);
