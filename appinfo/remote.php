@@ -30,7 +30,7 @@
 
 // curl --insecure --request PROPFIND https://10.2.0.254/remote.php/mydav/test/
 
-OC_Log::write('chooser','Remote access',OC_Log::DEBUG);
+OC_Log::write('chooser','HEADERS: '.serialize(getallheaders()), OC_Log::INFO);
 
 require_once 'chooser/lib/ip_auth.php';
 require_once 'chooser/lib/x509_auth.php';
@@ -181,14 +181,9 @@ $authBackendX509 = new Sabre\DAV\Auth\Backend\X509();
 $authPluginX509 = new Sabre\DAV\Auth\Plugin($authBackendX509, $name);
 $server->addPlugin($authPluginX509);
 
-//$authBackend = new OC_Connector_Sabre_Auth();
-$authBackend = new OC_Connector_Sabre_Auth_NBF();
-$authPlugin = new Sabre\DAV\Auth\Plugin($authBackend, $name);
-$server->addPlugin($authPlugin);
-
 //if(strpos($_SERVER['REQUEST_URI'], "/files/")!==0){
 if($baseuri == OC::$WEBROOT."/public" || $baseuri == OC::$WEBROOT."/sharingout"){
-	//OC_Log::write('chooser','REQUEST '.$_SERVER['REQUEST_URI'], OC_Log::WARN);
+	OC_Log::write('chooser','REQUEST '.$_SERVER['REQUEST_URI'], OC_Log::WARN);
 	$authBackendShare = new Sabre\DAV\Auth\Backend\Share($baseuri);
 	$authPluginShare = new Sabre\DAV\Auth\Plugin($authBackendShare, $name);
 	$server->addPlugin($authPluginShare);
@@ -200,6 +195,23 @@ if($baseuri == OC::$WEBROOT."/public" || $baseuri == OC::$WEBROOT."/sharingout")
 		$objectTree->auth_path = $authBackendShare->path;
 	}
 	$objectTree->allowUpload = $authBackendShare->allowUpload;
+}
+elseif($baseuri != OC::$WEBROOT."/sharingin"){
+	//$authBackend = new OC_Connector_Sabre_Auth();
+	$authBackend = new OC_Connector_Sabre_Auth_NBF();
+	$authPlugin = new Sabre\DAV\Auth\Plugin($authBackend, $name);
+	$server->addPlugin($authPlugin);
+}
+
+$user = \OC_User::getUser();
+if(empty($user)){
+	$user = $_SERVER['PHP_AUTH_USER'];
+}
+if(empty($user) && $baseuri == OC::$WEBROOT."/sharingout"){
+	OC_Log::write('chooser','ERROR: no user '.serialize($_SERVER), OC_Log::WARN);
+	$server->httpResponse->setHeader('WWW-Authenticate: Basic realm="Share"');
+	$server->httpResponse->sendStatus(401);
+	exit;
 }
 
 // Also make sure there is a 'data' directory, writable by the server. This directory is used to store information about locks
@@ -219,11 +231,12 @@ $server->addPlugin(new OC_Connector_Sabre_ExceptionLoggerPlugin('davs'));
 // Accept mod_rewrite internal redirects.
 if(!$favoriteLink && empty($objectTree->favorites)){
 	$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/webdav|",
-			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+		OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 	$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/dav/files/".
-			$authPlugin->getCurrentUser()."|", OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+		/*$authPlugin->getCurrentUser()*/$user."|", OC::$WEBROOT."/remote.php/mydav/",
+		$_SERVER['REQUEST_URI']);
 	$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/dav|",
-			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+		OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 }
 
 // Accept include by remote.php from files_sharding.

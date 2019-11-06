@@ -89,8 +89,8 @@ class Share extends AbstractBasic {
 					strpos($reqPath, '/'.$share['uid_owner'].'/'.$sharename.'/')===0)){
 				$this->userId = $share['uid_owner'];
 				$this->sharingOutAuthenticated = true;
-				\OCP\Util::writeLog('chooser', 'User OK: '. $checkOwner.': '.$this->authUser.
-						":".$this->userId, \OC_Log::WARN);
+				\OCP\Util::writeLog('chooser', 'User OK: '. $checkOwner.':'.$this->authUser.
+						':'.$this->userId, \OC_Log::WARN);
 				break;
 			}
 		}
@@ -198,7 +198,7 @@ class Share extends AbstractBasic {
 	}
 
 	public function authenticate(\Sabre\DAV\Server $server, $realm) {
-		\OC_Log::write('chooser','Authenticating: '.$this->userId, \OC_Log::INFO);
+		\OC_Log::write('chooser','Authenticating: '.$this->userId, \OC_Log::WARN);
 		if($this->sharingOut && $this->sharingOutAuthenticated){
 			\OC_Util::tearDownFS();
 			\OC_User::setUserId($this->authUser);
