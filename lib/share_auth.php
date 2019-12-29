@@ -37,7 +37,7 @@ class Share extends AbstractBasic {
 			$this->authUser = $_SERVER['PHP_AUTH_USER'];
 		}
 		self::$baseUri = $baseuri;
-		$reqUri = \OCP\Util::getRequestUri();
+		$reqUri = urldecode(\OCP\Util::getRequestUri());
 		$reqPath = substr($reqUri, strlen(self::$baseUri));
 		$reqPath = \OC\Files\Filesystem::normalizePath($reqPath);
 		$token = preg_replace("/^\/([^\/]*)\/.*$/", "$1", $reqPath);
