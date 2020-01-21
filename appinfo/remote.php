@@ -34,6 +34,7 @@ OC_Log::write('chooser','HEADERS: '.serialize(getallheaders()), OC_Log::INFO);
 
 require_once 'chooser/lib/ip_auth.php';
 require_once 'chooser/lib/x509_auth.php';
+require_once 'chooser/lib/device_auth.php';
 require_once 'chooser/lib/share_auth.php';
 require_once 'chooser/lib/nbf_auth.php';
 require_once 'chooser/lib/server.php';
@@ -180,6 +181,10 @@ $server->addPlugin($authPluginIP);
 $authBackendX509 = new Sabre\DAV\Auth\Backend\X509();
 $authPluginX509 = new Sabre\DAV\Auth\Plugin($authBackendX509, $name);
 $server->addPlugin($authPluginX509);
+
+$authBackendDevice = new Sabre\DAV\Auth\Backend\Device();
+$authPluginDevice = new Sabre\DAV\Auth\Plugin($authBackendDevice, $name);
+$server->addPlugin($authPluginDevice);
 
 //if(strpos($_SERVER['REQUEST_URI'], "/files/")!==0){
 if($baseuri == OC::$WEBROOT."/public" || $baseuri == OC::$WEBROOT."/sharingout"){

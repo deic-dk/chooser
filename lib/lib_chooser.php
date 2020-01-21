@@ -149,5 +149,24 @@ class OC_Chooser {
 		$query = \OCP\DB::prepare($sql);
 		return $query->execute($args);
 	}
+	
+	public static function getDeviceTokens($user){
+		$result = array();
+		$sql = "SELECT configkey, configvalue FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey LIKE ?";
+		$args = array($user, 'chooser', 'device_token_%');
+		$query = \OCP\DB::prepare($sql);
+		$output = $query->execute($args);
+		$result = [];
+		while($row=$output->fetchRow()){
+			$result[$row['configkey']] = $row['configvalue'];
+		}
+		return $result;
+	}
+	
+	public static function setDeviceToken($user, $deviceName){
+		$token = ''.md5(uniqid(mt_rand(), true));
+		OCP\Config::setUserValue($user, 'chooser', 'device_token_'.$deviceName, $token);
+		return $token;
+	}
 
 }

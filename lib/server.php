@@ -277,6 +277,17 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 	* Small helper to hide folders from sync clients.
 	*/
 	private function excludePath($path){
+		
+		// rclone does not deal well with % in filenames. We use rclone for server-server backup.
+		// Thus we need this ugly hack.
+		// TODO: inform user about the problem.
+		if(stripos($_SERVER['HTTP_USER_AGENT'], "rclone")!==false &&
+				stripos($path, "%")!==false &&
+				OC_Chooser::checkTrusted($_SERVER['REMOTE_ADDR'])){
+					OC_Log::write('chooser','RCLONE PROBLEM - percent in path/filename: '.$path, OC_Log::WARN);
+				return true;
+		}
+		
 		//if(stripos($_SERVER['HTTP_USER_AGENT'], "cadaver")===false && stripos($_SERVER['HTTP_USER_AGENT'], "curl")===false){
 		if(!isset($_SERVER['HTTP_USER_AGENT'])  || strpos($_SERVER['HTTP_USER_AGENT'], "IP_PASS:")===0 ||
 				stripos($_SERVER['HTTP_USER_AGENT'], "mirall")===false &&
