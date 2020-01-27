@@ -150,23 +150,91 @@ class OC_Chooser {
 		return $query->execute($args);
 	}
 	
+	public static function getDeviceToken($user, $deviceName){
+		$sql = "SELECT configkey, configvalue FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey = ?";
+		$args = array($user, 'chooser', 'device_token_'.$deviceName);
+		$query = \OCP\DB::prepare($sql);
+		$output = $query->execute($args);
+		while($row=$output->fetchRow()){
+			if(!empty($row['configvalue'])){
+				return $row['configvalue'];
+			}
+		}
+		return null;
+	}
+	
+	public static function validateToken($token){
+		$sql = "SELECT userid, configkey, configvalue FROM *PREFIX*preferences WHERE appid = ? AND configkey like ?";
+		$args = array('chooser', 'token_%');
+		$query = \OCP\DB::prepare($sql);
+		$output = $query->execute($args);
+		while($row=$output->fetchRow()){
+			if(!empty($row['configvalue']) && $token==$row['configvalue']){
+				return $row['userid'];
+			}
+		}
+		return false;
+	}
+	
 	public static function getDeviceTokens($user){
 		$result = array();
 		$sql = "SELECT configkey, configvalue FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey LIKE ?";
 		$args = array($user, 'chooser', 'device_token_%');
 		$query = \OCP\DB::prepare($sql);
 		$output = $query->execute($args);
-		$result = [];
 		while($row=$output->fetchRow()){
-			$result[$row['configkey']] = $row['configvalue'];
+			if(!empty($row['configkey'])){
+				$result[$row['configkey']] = $row['configvalue'];
+			}
 		}
 		return $result;
 	}
 	
-	public static function setDeviceToken($user, $deviceName){
-		$token = ''.md5(uniqid(mt_rand(), true));
-		OCP\Config::setUserValue($user, 'chooser', 'device_token_'.$deviceName, $token);
+	public static function setDeviceToken($user, $deviceName, $token){
+		$forcePortable = (CRYPT_BLOWFISH != 1);
+		$hasher = new \PasswordHash(8, $forcePortable);
+		$hash = $hasher->HashPassword($token . \OC_Config::getValue('passwordsalt', ''));
+		OCP\Config::setUserValue($user, 'chooser', 'device_token_'.$deviceName, $hash);
 		return $token;
+	}
+	
+	public static function setToken($user, $id, $token){
+		OCP\Config::setUserValue($user, 'chooser', $id, $token);
+		return $token;
+	}
+	
+	public static function deleteToken($token){
+		$sql = "DELETE FROM *PREFIX*preferences WHERE appid = ? AND configkey LIKE ? AND configvalue = ?";
+		$args = array('chooser', 'token_%', $token);
+		$query = \OCP\DB::prepare($sql);
+		$query->execute($args);
+	}
+	
+	public static function cleanupTokens(){
+		$nowDate = new \DateTime();
+		$now = $nowDate->getTimestamp();
+		$sql = "SELECT configkey, configvalue FROM *PREFIX*preferences WHERE appid = ? AND configkey LIKE ?";
+		$args = array('chooser', 'token_%');
+		$query = \OCP\DB::prepare($sql);
+		$output = $query->execute($args);
+		$toDeleteTokenIds = array();
+		while($row=$output->fetchRow()){
+			if(!empty($row['configkey']) &&
+				substr($row['configkey'], 0, strlen('token_'.$row['configvalue']))==
+				'token_'.$row['configvalue']){
+				$tokenTimeStamp = substr($row['configkey'], strlen('token_')+32/*token*/+1);
+				// Discard tokens older than one week
+				if($now-$tokenTimeStamp>7*24*60*60){
+					$toDeleteTokenIds[] = $row['configkey'];
+				}
+			}
+		}
+		foreach($toDeleteTokenIds as $id){
+			$sql = "DELETE FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey = ?";
+			$args = array('guest', 'chooser', $id);
+			$query = \OCP\DB::prepare($sql);
+			$query->execute($args);
+		}
 	}
 
 }

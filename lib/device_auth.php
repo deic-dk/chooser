@@ -25,14 +25,15 @@ class Device extends AbstractBasic {
 	 * @return bool
 	 */
 	protected function validateUserPass($username, $password) {
+		\OCP\Util::writeLog('chooser', 'Validating password '.$password. ' for user '.$username, \OC_Log::INFO);
 		$device_tokens = \OC_Chooser::getDeviceTokens($username);
 		if(empty($device_tokens)){
 			return false;
 		}
 		$forcePortable = (CRYPT_BLOWFISH != 1);
-		$hasher = new PasswordHash(8, $forcePortable);
+		$hasher = new \PasswordHash(8, $forcePortable);
 		foreach($device_tokens as $device_name=>$storedHash){
-			if($hasher->CheckPassword($password . OC_Config::getValue('passwordsalt', ''), $storedHash)){
+			if($hasher->CheckPassword($password . \OC_Config::getValue('passwordsalt', ''), $storedHash)){
 				$user_id = $username;
 				break;
 			}
@@ -41,6 +42,7 @@ class Device extends AbstractBasic {
 			$this->currentUser = $user_id;
 			\OC_User::setUserId($user_id);
 			\OC_Util::setUpFS($user_id);
+			\OCP\Util::writeLog('chooser', 'Validated password for '.$username, \OC_Log::INFO);
 			return true;
 		}
 		else{
