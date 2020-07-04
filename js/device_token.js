@@ -50,12 +50,15 @@ function authorizeDevice(){
 
 $(document).ready(function() {
 	$('#authorize_device').click(function(ev){
-		// Old case - redirect and have client pick up nc protocol. Apparently not supported anymore.
-		if(false){
+		// Android case - redirect and have client pick up nc protocol.
+		if($('input#flow').length){
 			var server = $('#authorize_device').attr('server');
 			var user = $('#authorize_device').attr('user');
 			var password = $('#device_token').val();
-			window.location.href="nc://login/server:"+server+"&user:"+user+"&password:"+password;
+			var url = "nc://login/server:"+server+"&user:"+user+"&password:"+password
+			authorizeDevice();
+			window.location.href=url;
+			return false;
 		}
 		else{
 			authorizeDevice();

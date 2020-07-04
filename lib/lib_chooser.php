@@ -223,7 +223,7 @@ class OC_Chooser {
 				substr($row['configkey'], 0, strlen('token_'.$row['configvalue']))==
 				'token_'.$row['configvalue']){
 				$tokenTimeStamp = substr($row['configkey'], strlen('token_')+32/*token*/+1);
-				// Discard tokens older than one week
+				// Discard 'guest' tokens older than one week
 				if($now-$tokenTimeStamp>7*24*60*60){
 					$toDeleteTokenIds[] = $row['configkey'];
 				}

@@ -41,5 +41,8 @@ $themepath = OC::$WEBROOT.'/themes/'.OC_Util::getTheme();
 			</div>
 		</div>
 <?php endif; ?>
+<?php if (isset($_['flow'])): ?>
+<input type="hidden" id="flow" value="true" />
+<?php endif; ?>
 	</div>
 </div>
