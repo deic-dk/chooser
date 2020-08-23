@@ -1,5 +1,7 @@
 <?php
 
+\OCP\Util::writeLog('status', 'REQUEST: '.$_SERVER['REQUEST_URI'].'-->'.serialize($_REQUEST), \OC_Log::WARN);
+\OCP\Util::writeLog('status', 'HEADERS: '.serialize(getallheaders()), \OC_Log::WARN);
 
 try {
 	$inc = "../../lib/base.php";
@@ -11,8 +13,6 @@ try {
 	}
 	require_once 'lib/lib_chooser.php';
 	
-	\OCP\Util::writeLog('status', 'REQUEST: '.$_SERVER['REQUEST_URI'].'-->'.serialize($_REQUEST), \OC_Log::WARN);
-	\OCP\Util::writeLog('status', 'HEADERS: '.serialize(getallheaders()), \OC_Log::WARN);
 	$nowDate = new \DateTime();
 	$now = $nowDate->getTimestamp();
 	
@@ -21,17 +21,20 @@ try {
 		$user = \OC_Chooser::validateToken($_POST['token']);
 		if(!empty($user) && $user!='guest'){
 			\OC_Chooser::deleteToken($_POST['token']);
-			$server = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http").
-				"://".$_SERVER[HTTP_HOST].OC::$WEBROOT;
+			/*$server = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http").
+				"://".$_SERVER[HTTP_HOST].OC::$WEBROOT;*/
+			$server = OCA\FilesSharding\Lib::getServerForUser($user);
 			$values=array(
 				"server"=>$server,
 				"loginName"=>$user,
 				"appPassword"=>$_POST['token']
 			);
-			echo json_encode($values);
+			header("Access-Control-Allow-Origin: *");
+			header("Content-Type: application/json");
+			echo json_encode($values, JSON_UNESCAPED_SLASHES);
 		}
 		else{
-			header('HTTP/1.0 404 Not Allowed');
+			header('HTTP/1.0 401 Unauthorized');
 			exit();
 		}
 	}
@@ -50,13 +53,13 @@ try {
 			\OC_Chooser::setDeviceToken($user, $deviceName, $token);
 			OC_Log::write('chooser', 'Token ok: '.$token, OC_Log::WARN);
 			$ret['message'] = "Device added with token ".$token;
-			OCP\JSON::encodedPrint($ret);
+			OCP\JSON::encodedPrint($ret, JSON_UNESCAPED_SLASHES);
 		}
 		else{
 			OC_Log::write('chooser', 'Token invalid: '.$token, OC_Log::WARN);
-			header('HTTP/1.0 404 Not Allowed');
+			header('HTTP/1.0 401 Unauthorized');
 			$ret['error'] = "Invalid token ".$token;
-			OCP\JSON::encodedPrint($ret);
+			OCP\JSON::encodedPrint($ret, JSON_UNESCAPED_SLASHES);
 			exit();
 		}
 	}
@@ -80,24 +83,25 @@ try {
 	}
 	// Redirected here by mod_rewrite of index.php/login/flow - which is called by the Nextcloud Android client
 	elseif(isset($_GET['orig_uri']) && $_GET['orig_uri']==trim((OC::$WEBROOT.'/index.php/login/flow'), '/')){
+		/*if(stripos($_SERVER['HTTP_USER_AGENT'], "iOS")!==false){
+			header('HTTP/1.0 404 Not Found');
+			exit();
+		}*/
 		$token = ''.md5(uniqid(mt_rand(), true));
 		\OC_Chooser::setToken('guest', 'token_'.$token.'_'.$now, $token);
-		\OC_Response::redirect(OC::$WEBROOT."/?redirect_url=".urlencode(OC::$WEBROOT.
-				"/apps/chooser/login.php?token=".$token."&flow=true"));
+		\OC_Response::redirect(OC::$WEBROOT."/?redirect_url=".OC::$WEBROOT.
+				"/apps/chooser/login.php?token=".$token."&flow=true");
+	}
+	elseif(!empty($_GET['server'])&&!empty($_GET['user'])&&!empty($_GET['password'])){
+		\OC_Response::redirect(
+				"nc://login/server:".$_GET['server']."&user:".$_GET['user']."&password:".$_GET['password']);
+		exit();
 	}
 	// Redirected here by mod_rewrite of index.php/login/v2 - which is called by the Nextcloud iPhone client
 	else{
 		// Used to prove this is indeed the client that will be authenticated above
-		$token = ''.md5(uniqid(mt_rand(), true));
-		// The token set for device name starting with token is temporary and only used for validating the device above
-		\OC_Chooser::setToken('guest', 'token_'.$token.'_'.$now, $token);
-		$actual_link = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http").
-			"://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
-		$values=array(
-			"login"=>\OCA\FilesSharding\Lib::getMasterURL().
-				"?redirect_url=".OC::$WEBROOT."/apps/chooser/login.php?token=".$token,
-				"poll"=>array("token"=>$token, "endpoint"=>$actual_link));
-		echo json_encode($values);
+		echo json_encode(\OC_Chooser::pollingValues(), JSON_UNESCAPED_SLASHES);
+		exit;
 	}
 } catch (Exception $ex) {
 	OC_Response::setStatus(OC_Response::STATUS_INTERNAL_SERVER_ERROR);

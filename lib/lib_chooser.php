@@ -236,5 +236,20 @@ class OC_Chooser {
 			$query->execute($args);
 		}
 	}
+	
+	public static function pollingValues(){
+		$nowDate = new \DateTime();
+		$now = $nowDate->getTimestamp();
+		$token = ''.md5(uniqid(mt_rand(), true));
+		// The token set for device name starting with token is temporary and only used for validating the device above
+		\OC_Chooser::setToken('guest', 'token_'.$token.'_'.$now, $token);
+		$actual_link = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http").
+		"://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+		$values = array(
+				"login"=>\OCA\FilesSharding\Lib::getMasterURL().
+				"?redirect_url=".OC::$WEBROOT."/apps/chooser/login.php?token=".$token,
+				"poll"=>array("token"=>$token, "endpoint"=>$actual_link));
+		return $values;
+	}
 
 }

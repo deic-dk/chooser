@@ -33,11 +33,14 @@ $themepath = OC::$WEBROOT.'/themes/'.OC_Util::getTheme();
 			</select>
 			<p />
 			<div>
-				<button class="btn btn-default btn-flat"
+				<div class="btn btn-default btn-flat"
 				id="authorize_device" server="<?php p($_['server']);?>" user="<?php p($_['user']);?>">
-				<?php p($l->t("Authorize device"));?></button>
+				<?php p($l->t("Authorize device"));?></div>
 				<a class="btn btn-flat" href="/"><?php p($l->t("Cancel"));?></a>
 				<p id='chooser_msg'></p>
+			</div>
+			<div class="spacious">
+				<a id="done_link" href="https://sciencedata.dk/" style="display: none;">Done</a>
 			</div>
 		</div>
 <?php endif; ?>
