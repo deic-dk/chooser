@@ -78,6 +78,11 @@ class OC_Connector_Sabre_Favorites_Directory extends OC_Connector_Sabre_Node
 			$owner = '';
 			$group = '';
 			if(!empty($query['owner']) && !empty($query['id'])){
+				// For some reason these URLs now seem not to be followed by the iOS client
+				// although the links work. Skipping for now.
+				// TODO: reenable - and also make PROPPATCH work with group folders and shares
+				continue;
+				//
 				$fileid = $query['id'];
 				$owner = $query['owner'];
 				if(!empty($query['group'])){
@@ -86,6 +91,9 @@ class OC_Connector_Sabre_Favorites_Directory extends OC_Connector_Sabre_Node
 				$uri = '/@@/sharingin/'.$query['owner'].$target['path'];
 			}
 			elseif(!empty($query['group'])){
+				// See above
+				continue;
+				//
 				$group = $query['group'];
 				$uri = '/@@/group/'.$group.$target['path'];
 			}
