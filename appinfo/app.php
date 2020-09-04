@@ -15,7 +15,7 @@ elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/index.php/login")===0){
 else{
 	$user_id = OC_Chooser::checkIP();
 	#$user_id = "fror@dtu.dk";
-	OC_Log::write('chooser','user_id '.$user_id ,OC_Log::WARN);
+	OC_Log::write('chooser','user_id '.$user_id ,OC_Log::INFO);
 	if(!empty($user_id) && OC_User::userExists($user_id)){
 	   $_SESSION['user_id'] = $user_id;
 	   \OC_Util::setupFS();
