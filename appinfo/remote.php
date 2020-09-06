@@ -397,7 +397,10 @@ if(!empty($loggedInUser) && $loggedInUser!=$user_id){
 	\OC_User::setUserId($loggedInUser);
 	\OC_Util::setupFS($loggedInUser);
 }
-elseif(session_status()===PHP_SESSION_ACTIVE){
+elseif(session_status()===PHP_SESSION_ACTIVE &&
+		// This is to avoid that the connectivity checks of the admin page
+		// flushes the session.
+		(empty($_SERVER['HTTP_REFERER']) || substr($_SERVER['HTTP_REFERER'], -25)!="/index.php/settings/admin")){
 	session_destroy();
 	$session_id = session_id();
 	unset($_COOKIE[$session_id]);
