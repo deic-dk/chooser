@@ -94,7 +94,8 @@ $favoriteLink = false;
 //$baseuri = OC_App::getAppWebPath('chooser').'appinfo/remote.php';
 $baseuri = OC::$WEBROOT."/remote.php/mydav";
 // Known aliases
-if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/files/")===0){
+if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/files/")===0 ||
+		$_SERVER['REQUEST_URI']==OC::$WEBROOT."/files"){
 	$baseuri = OC::$WEBROOT."/files";
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0){
