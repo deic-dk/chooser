@@ -233,7 +233,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			if (pathinfo($path, PATHINFO_EXTENSION) === 'part') {
 				// read from storage
 				$absPath = $this->fileView->getAbsolutePath($filepath);
-				list($storage, $internalPath) = Filesystem::resolvePath('/' . $absPath);
+				list($storage, $internalPath) = \OC\Files\Filesystem::resolvePath('/' . $absPath);
 				if ($storage) {
 					$scanner = $storage->getScanner($internalPath);
 					// get data directly
