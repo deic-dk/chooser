@@ -246,7 +246,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			}
 		}
 
-		if (!$info) {
+		if (empty($info)) {
 			throw new \Sabre\DAV\Exception\NotFound('File with name ' . $filepath . ' could not be located');
 		}
 		

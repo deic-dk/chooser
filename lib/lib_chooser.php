@@ -26,7 +26,7 @@ class OC_Chooser {
 			$tnet = trim($tnet);
 			$tnets = explode(' ', $tnet);
 			self::$uservlannets = array_map('trim', $tnets);
-			if(count(self::$uservlannets)==1 && substr(self::$uservlannets[0], 0, 8)==='TRUSTED_'){
+			if(count(self::$uservlannets)==1 && substr(self::$uservlannets[0], 0, 10)==='USER_VLAN_'){
 				self::$uservlannets = [];
 			}
 		}
@@ -47,8 +47,8 @@ class OC_Chooser {
 	
 	private static function checkUserVlan($remoteIP){
 		self::loadNetValues();
-		foreach(self::$uservlannets as $trustednet){
-			if(!empty($remoteIP) && !empty($trustednet) && strpos($remoteIP, $trustednet)===0){
+		foreach(self::$uservlannets as $vlannet){
+			if(!empty($remoteIP) && !empty($vlannet) && strpos($remoteIP, $vlannet)===0){
 				return true;
 			}
 		}
@@ -57,22 +57,34 @@ class OC_Chooser {
 
 	public static function checkIP(){
 		//OC_Log::write('chooser', 'Client IP '.isset($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:'', OC_Log::DEBUG);
-		if(isset($_SERVER['REMOTE_ADDR']) && self::checkUserVlan($_SERVER['REMOTE_ADDR'])){
+		if(isset($_SERVER['REMOTE_ADDR']) && self::checkUserVlan($_SERVER['REMOTE_ADDR'])){ 
 			$user_id = '';
-			if(($list_array = apc_fetch(OC_Chooser::IPS_CACHE_KEY)) === false){
+			$list_array = [];
+			if(!empty(self::$vlanlisturl) && ($list_array = apc_fetch(OC_Chooser::IPS_CACHE_KEY)) === false){
 				$list_line = file_get_contents(self::$vlanlisturl);
 				$list_array = explode("\n", $list_line);
 				apc_add(OC_Chooser::IPS_CACHE_KEY, $list_array, OC_Chooser::IPS_TTL_SECONDS);
-				OC_Log::write('chooser', 'Refreshed IP cache: '.$list_array[3], OC_Log::INFO);
+				OC_Log::write('chooser', 'Refreshed IP cache: '.$list_array[0], OC_Log::INFO);
 			}
 			foreach($list_array as $line){
 				$entries = explode("|", $line);
-				if(count($entries)<8){
+				if(count($entries)<2){
 					continue;
 				}
-				$ip = trim($entries[5]);
-				$owner = trim($entries[7]);
-				if($ip != '' && $_SERVER['REMOTE_ADDR'] == $ip && $owner != ''){
+				// ip|owner
+				$ip = trim($entries[0]);
+				$owner = trim($entries[1]);
+				// Request from user container or vm for /files/ or other php-served URL
+				if(!empty($ip) && !empty($owner) && !empty($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR']==$ip){
+					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
+					$user_id = $owner;
+					\OC::$session->set('user_id', $owner);
+					break;
+				}
+				// Request from localhost to verify request from user container or vm for
+				// /data/ - served by Apache
+				if(!empty($_SERVER['REMOTE_ADDR']) && ($_SERVER['REMOTE_ADDR']=="localhost" || $_SERVER['REMOTE_ADDR']=="127.0.0.1") &&
+						!empty($ip) && !empty($owner) && !empty($_SERVER['HTTP_IP']) && $_SERVER['HTTP_IP']==$ip){
 					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
 					$user_id = $owner;
 					\OC::$session->set('user_id', $owner);
