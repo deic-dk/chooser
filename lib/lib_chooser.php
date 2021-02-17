@@ -56,14 +56,13 @@ class OC_Chooser {
 	}
 
 	public static function checkIP(){
-		//OC_Log::write('chooser', 'Client IP '.isset($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:'', OC_Log::DEBUG);
-		if(isset($_SERVER['REMOTE_ADDR']) && self::checkUserVlan($_SERVER['REMOTE_ADDR'])){ 
+		if(isset($_SERVER['REMOTE_ADDR']) && self::checkUserVlan($_SERVER['REMOTE_ADDR'])){
 			$user_id = '';
 			$list_array = [];
-			if(!empty(self::$vlanlisturl) && ($list_array = apc_fetch(OC_Chooser::IPS_CACHE_KEY)) === false){
+			if(!empty(self::$vlanlisturl) && ($list_array = apc_fetch(self::$IPS_CACHE_KEY)) === false){
 				$list_line = file_get_contents(self::$vlanlisturl);
 				$list_array = explode("\n", $list_line);
-				apc_add(OC_Chooser::IPS_CACHE_KEY, $list_array, OC_Chooser::IPS_TTL_SECONDS);
+				apc_add(self::$IPS_CACHE_KEY, $list_array, self::$IPS_TTL_SECONDS);
 				OC_Log::write('chooser', 'Refreshed IP cache: '.$list_array[0], OC_Log::INFO);
 			}
 			foreach($list_array as $line){
@@ -71,9 +70,10 @@ class OC_Chooser {
 				if(count($entries)<2){
 					continue;
 				}
-				// ip|owner
-				$ip = trim($entries[0]);
-				$owner = trim($entries[1]);
+				// pod_name|container_name|image_name|pod_ip|node_ip|owner|age(s)|status|ssh_port|https_port
+				$ip = trim($entries[3]);
+				$owner = trim($entries[5]);
+				OC_Log::write('chooser', 'IP '.$_SERVER['REMOTE_ADDR'].' : '.$ip.' : '.$owner, OC_Log::WARN);
 				// Request from user container or vm for /files/ or other php-served URL
 				if(!empty($ip) && !empty($owner) && !empty($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR']==$ip){
 					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
@@ -81,8 +81,8 @@ class OC_Chooser {
 					\OC::$session->set('user_id', $owner);
 					break;
 				}
-				// Request from localhost to verify request from user container or vm for
-				// /data/ - served by Apache
+				// Request from localhost to verify request from user container for
+				// /storage/ - served by Apache
 				if(!empty($_SERVER['REMOTE_ADDR']) && ($_SERVER['REMOTE_ADDR']=="localhost" || $_SERVER['REMOTE_ADDR']=="127.0.0.1") &&
 						!empty($ip) && !empty($owner) && !empty($_SERVER['HTTP_IP']) && $_SERVER['HTTP_IP']==$ip){
 					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);

@@ -283,7 +283,7 @@ curl -u fror@dtu.dk:dumdym123 --data-binary '<?xml version="1.0"?><oc:filter-fil
 		// rclone does not deal well with % in filenames. We use rclone for server-server backup.
 		// Thus we need this ugly hack.
 		// TODO: inform user about the problem.
-		if(stripos($_SERVER['HTTP_USER_AGENT'], "rclone")!==false &&
+		if(!empty($_SERVER['HTTP_USER_AGENT']) && stripos($_SERVER['HTTP_USER_AGENT'], "rclone")!==false &&
 				stripos($path, "%")!==false &&
 				OC_Chooser::checkTrusted($_SERVER['REMOTE_ADDR'])){
 					OC_Log::write('chooser','RCLONE PROBLEM - percent in path/filename: '.$path, OC_Log::WARN);

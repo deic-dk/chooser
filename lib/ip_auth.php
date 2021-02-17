@@ -33,6 +33,9 @@ class IP extends AbstractBasic {
 		}
 		$user_id = \OC_Chooser::checkIP();
 		if($user_id != '' && \OC_User::userExists($user_id)){
+			if(!empty($_SERVER['PHP_AUTH_USER']) && $user_id != $_SERVER['PHP_AUTH_USER']){
+				throw new \Sabre\DAV\Exception\NotAuthenticated('Username or password does not match');
+			}
 			$this->currentUser = $user_id;
 			\OC_User::setUserId($user_id);
 			\OC_Util::setUpFS($user_id);
@@ -53,10 +56,14 @@ class IP extends AbstractBasic {
 			return false;
 		}
 		$user_id = \OC_Chooser::checkIP();
+		\OC_Log::write('chooser','user_id NOW '.$user_id.' : '.$_SERVER['PHP_AUTH_USER'],\OC_Log::WARN);
 		/*if($user_id == '' || !\OC_User::userExists($user_id)){
 			throw new \Sabre\DAV\Exception\NotAuthenticated('Not a valid IP address / userid, ' . $user_id);
 		}*/
 		if($user_id != '' && \OC_User::userExists($user_id)){
+			if(!empty($_SERVER['PHP_AUTH_USER']) && $user_id != $_SERVER['PHP_AUTH_USER']){
+				throw new \Sabre\DAV\Exception\NotAuthenticated('Username or password does not match');
+			}
 			$this->currentUser = $user_id;
 			\OC_User::setUserId($user_id);
 			\OC_Util::setUpFS($user_id);
