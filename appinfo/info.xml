@@ -7,10 +7,12 @@
     <licence>AGPL</licence>
     <author>Frederik Orellana</author>
     <require>4.93</require>
-    <!--<types>
+    <types>
         <type>filesystem</type>
         <type>authentication</type>
-    </types>-->
+        <type>prelogin</type>
+        <type>session</type>
+    </types>
     <standalone />
     <remote>
       <mydav>appinfo/remote.php</mydav>

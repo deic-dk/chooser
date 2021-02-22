@@ -180,12 +180,18 @@ class OC_Chooser {
 		$args = array('chooser', 'token_%');
 		$query = \OCP\DB::prepare($sql);
 		$output = $query->execute($args);
+		$ret = false;
 		while($row=$output->fetchRow()){
 			if(!empty($row['configvalue']) && $token==$row['configvalue']){
-				return $row['userid'];
+				if($row['userid']!='guest'){
+					return $row['userid'];
+				}
+				else{
+					$ret = $row['userid'];
+				}
 			}
 		}
-		return false;
+		return $ret;
 	}
 	
 	public static function getDeviceTokens($user){
@@ -206,12 +212,12 @@ class OC_Chooser {
 		$forcePortable = (CRYPT_BLOWFISH != 1);
 		$hasher = new \PasswordHash(8, $forcePortable);
 		$hash = $hasher->HashPassword($token . \OC_Config::getValue('passwordsalt', ''));
-		OCP\Config::setUserValue($user, 'chooser', 'device_token_'.$deviceName, $hash);
+		\OCP\Config::setUserValue($user, 'chooser', 'device_token_'.$deviceName, $hash);
 		return $token;
 	}
 	
 	public static function setToken($user, $id, $token){
-		OCP\Config::setUserValue($user, 'chooser', $id, $token);
+		\OCP\Config::setUserValue($user, 'chooser', $id, $token);
 		return $token;
 	}
 	
@@ -250,15 +256,18 @@ class OC_Chooser {
 	}
 	
 	public static function pollingValues(){
+		//require_once('apps/files_sharding/lib/lib_files_sharding.php');
 		$nowDate = new \DateTime();
 		$now = $nowDate->getTimestamp();
 		$token = ''.md5(uniqid(mt_rand(), true));
 		// The token set for device name starting with token is temporary and only used for validating the device above
 		\OC_Chooser::setToken('guest', 'token_'.$token.'_'.$now, $token);
-		$actual_link = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http").
-		"://".$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+		$actual_host = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http").
+		"://".$_SERVER['HTTP_HOST'];
+		$actual_link = $actual_host.preg_replace('|\?.*$|', '', $_SERVER['REQUEST_URI']);
 		$values = array(
-				"login"=>\OCA\FilesSharding\Lib::getMasterURL().
+				//"login"=>\OCA\FilesSharding\Lib::getMasterURL().
+				"login"=>$actual_host.
 				"?redirect_url=".OC::$WEBROOT."/apps/chooser/login.php?token=".$token,
 				"poll"=>array("token"=>$token, "endpoint"=>$actual_link));
 		return $values;

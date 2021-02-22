@@ -12,6 +12,7 @@ try {
 		require_once 'base.php';
 	}
 	require_once 'lib/lib_chooser.php';
+	require_once('apps/files_sharding/lib/lib_files_sharding.php');
 	
 	$nowDate = new \DateTime();
 	$now = $nowDate->getTimestamp();
@@ -19,11 +20,12 @@ try {
 	// Polling
 	if(!empty($_POST['token'])){
 		$user = \OC_Chooser::validateToken($_POST['token']);
+		\OCP\Util::writeLog('status', 'Checking for poll...'.$user, \OC_Log::WARN);
 		if(!empty($user) && $user!='guest'){
 			\OC_Chooser::deleteToken($_POST['token']);
 			/*$server = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http").
 				"://".$_SERVER[HTTP_HOST].OC::$WEBROOT;*/
-			$server = OCA\FilesSharding\Lib::getServerForUser($user);
+			$server = \OCA\FilesSharding\Lib::getServerForUser($user);
 			$values=array(
 				"server"=>$server,
 				"loginName"=>$user,
@@ -32,6 +34,7 @@ try {
 			header("Access-Control-Allow-Origin: *");
 			header("Content-Type: application/json");
 			echo json_encode($values, JSON_UNESCAPED_SLASHES);
+			exit();
 		}
 		else{
 			header('HTTP/1.0 401 Unauthorized');
@@ -51,7 +54,7 @@ try {
 			\OC_Chooser::cleanupTokens();
 			\OC_Chooser::setToken($user, 'token_'.$token.'_'.$now, $token);
 			\OC_Chooser::setDeviceToken($user, $deviceName, $token);
-			OC_Log::write('chooser', 'Token ok: '.$token, OC_Log::WARN);
+			OC_Log::write('chooser', 'Token ok: '.$user.':'.$deviceName.':'.$token, OC_Log::WARN);
 			$ret['message'] = "Device added with token ".$token;
 			OCP\JSON::encodedPrint($ret, JSON_UNESCAPED_SLASHES);
 		}
@@ -100,7 +103,9 @@ try {
 	// Redirected here by mod_rewrite of index.php/login/v2 - which is called by the Nextcloud iPhone client
 	else{
 		// Used to prove this is indeed the client that will be authenticated above
-		echo json_encode(\OC_Chooser::pollingValues(), JSON_UNESCAPED_SLASHES);
+		$pollingValue = json_encode(\OC_Chooser::pollingValues(), JSON_UNESCAPED_SLASHES);
+		\OCP\Util::writeLog('remote', 'Returning json to poller: ' . $pollingValue, \OCP\Util::WARN);
+		echo $pollingValue;
 		exit;
 	}
 } catch (Exception $ex) {
