@@ -27,4 +27,5 @@ else{
 	}
 }
 
+\OC_User::useBackend('database');
 require_once('apps/chooser/appinfo/apache_note_user.php');
