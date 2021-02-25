@@ -14,8 +14,17 @@ require_once('3rdparty/sabre/dav/lib/Sabre/DAV/Auth/Backend/AbstractBasic.php');
 class Device extends AbstractBasic {
 	
 	private $ocs = false;
+	private $sharingOut = false;
+	private $baseuri = false;
 	
-	public function __construct() {
+	public function __construct($_baseuri) {
+		if(!empty($_baseuri)){
+			$this->baseuri = $_baseuri;
+			if($this->baseuri==\OC::$WEBROOT."/sharingout"){
+				$this->sharingOut = true;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -86,6 +95,9 @@ class Device extends AbstractBasic {
 			$this->currentUser = $user;
 			return true;
 		}
+		if($this->sharingOut){
+			return false;
+		}
 		return \Sabre\DAV\Auth\Backend\AbstractBasic::authenticate($server, $realm);
 	}
 	
@@ -98,7 +110,7 @@ class Device extends AbstractBasic {
 		\OCP\Util::writeLog('files_sharding', 'LOGIN INFO '.$_SERVER['PHP_AUTH_USER'].
 				":".":".$_SERVER['REQUEST_URI'], \OC_Log::INFO);
 		require_once '3rdparty/phpass/PasswordHash.php';
-		$authBackendDevice = new Device();
+		$authBackendDevice = new Device(null);
 		$authBackendDevice->ocs = true;
 		$authBackendDevice->checkUserPass($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']);
 		return true;

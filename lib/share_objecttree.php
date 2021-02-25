@@ -93,7 +93,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 				$shareeRoot = true;
 			}
 			//else
-			// Now deal with haringin/some.user@inst.dk/some_share
+			// Now deal with sharingin/some.user@inst.dk/some_share
 			OC_Log::write('chooser','Creating sharingin sharee dir '.$path, OC_Log::WARN);
 			$shares = \OCA\Files\Share_files_sharding\Api::getFilesSharedWithMe();
 			$found = false;

@@ -250,7 +250,13 @@ curl -u fror@dtu.dk:dumdym123 --data-binary '<?xml version="1.0"?><oc:filter-fil
 	 * Small helper to support PROPFIND with DEPTH_INFINITY.
 	 */
 	private function addPathNodesRecursively(&$nodes, $path) {
+		// For depth inifinity requests on /sharingin/some_user, back off
+		if(!empty($this->tree->sharingIn) && $this->tree->sharingIn &&
+				substr_count($path, '/')>1){
+			return;
+		}
 		foreach($this->tree->getChildren($path) as $childNode) {
+			OC_Log::write('chooser','Adding child: '.$path.'-->'.get_class($childNode), OC_Log::WARN);
 			if($this->excludePath($path) || $this->excludePath($path . '/' . $childNode->getName())){
 				continue;
 			}

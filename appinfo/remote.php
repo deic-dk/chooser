@@ -126,6 +126,11 @@ elseif(strpos(urldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/
 		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch'){
 			$_SERVER['REQUEST_URI'] = urldecode($_SERVER['REQUEST_URI']);
 }
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/remote.php/webdav/")===0){
+	$baseuri = OC::$WEBROOT."/sharingin/remote.php/webdav";
+	$objectTree->sharingIn = true;
+	//$objectTree->allowUpload = false;
+}
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/")===0){
 	$baseuri = OC::$WEBROOT."/sharingin";
 	$objectTree->sharingIn = true;
@@ -184,7 +189,7 @@ $authBackendX509 = new Sabre\DAV\Auth\Backend\X509();
 $authPluginX509 = new Sabre\DAV\Auth\Plugin($authBackendX509, $name);
 $server->addPlugin($authPluginX509);
 
-$authBackendDevice = new Sabre\DAV\Auth\Backend\Device();
+$authBackendDevice = new Sabre\DAV\Auth\Backend\Device($baseuri);
 $authPluginDevice = new Sabre\DAV\Auth\Plugin($authBackendDevice, $name);
 $server->addPlugin($authPluginDevice);
 
