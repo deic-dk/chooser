@@ -15,6 +15,8 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	public $favorites = false;
 	public $usage = false;
 	public $group = false;
+	private $shareStrings = array();
+	private $shareETags = array();
 	private $auth_user;
 	
 	public function fixPath(&$path){
@@ -64,7 +66,8 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	}
 	
 	public function getNodeForPath($path) {
-		\OC_Log::write('chooser','Getting node for '.$path.':'.$this->sharingOut, \OC_Log::INFO);
+		\OC_Log::write('chooser','Getting node for '.$path.':'.$_SERVER['REQUEST_URI'].
+				':'.$this->sharingIn.':'.$this->sharingOut, \OC_Log::INFO);
 		
 		if($this->allowUpload==false &&
 		(strtolower($_SERVER['REQUEST_METHOD'])=='mkcol' || strtolower($_SERVER['REQUEST_METHOD'])=='put' ||
@@ -77,33 +80,42 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 		$this->fixPath($path);
 
 		$path = trim($path, '/');
-		if (isset($this->cache[$path])) {
+		if(empty($this->sharingIn) && isset($this->cache[$path])){
+			OC_Log::write('chooser','Returning cache '.$path, OC_Log::WARN);
 			return $this->cache[$path];
 		}
 
 		// Is it the root node?
-		if (!strlen($path)) {
+		/*if(!strlen($path)){
 			return $this->rootNode;
-		}
+		}*/
 		$filepath = $path;
 		if(isset($this->sharingIn) && $this->sharingIn){
 			// First deal with sharingin/some.user@inst.dk/
 			$shareeRoot = false;
 			if(preg_match('|^[^/]+$|', $path)){
 				$shareeRoot = true;
+				OC_Log::write('chooser','Creating sharingin sharee dir '.$path, OC_Log::WARN);
 			}
 			//else
 			// Now deal with sharingin/some.user@inst.dk/some_share
-			OC_Log::write('chooser','Creating sharingin sharee dir '.$path, OC_Log::WARN);
 			$shares = \OCA\Files\Share_files_sharding\Api::getFilesSharedWithMe();
 			$found = false;
+			$setEtags = empty($this->shareStrings);
+			OC_Log::write('chooser','Setting etags? '.$setEtags.' : '.empty($this->shareStrings).' : '.
+					serialize($this->shareStrings).'-->'.serialize($this->shareETags), OC_Log::DEBUG);
 			foreach($shares->getData() as $share) {
-				if(strpos($path, $share['uid_owner'].'/')!==0 && $path!=$share['uid_owner']){
+				if(!empty($path) && strpos($path, $share['uid_owner'].'/')!==0 && $path!=$share['uid_owner']){
 					continue;
 				}
 				if($shareeRoot){
 					$found = true;
-					break;
+					if(!$setEtags){
+						OC_Log::write('chooser','Not Setting etags of '.$path.'->'.$share['uid_owner'].'->'.
+								$this->shareStrings[$share['uid_owner']], OC_Log::INFO);
+						continue;
+						// Continue to generate etag for sharingin/
+					}
 				}
 				$group = '';
 				if(!empty($share['path']) && preg_match("|^/*user_group_admin/|", $share['path'])){
@@ -114,22 +126,28 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 					$sharepath = preg_replace('|^/*files/|', '', $share['path']);
 				}
 				$sharename = preg_replace('|^.*/|', '', $sharepath);
-				$filepath = preg_replace('|^'.$share['uid_owner'].'/'.$sharename.'|', '', $path);
+				$filepath = substr($path, 0, strlen($share['uid_owner'].'/'.$sharename))==
+					$share['uid_owner'].'/'.$sharename?
+					preg_replace('|^'.$share['uid_owner'].'/'.$sharename.'|', '', $path):'';
 				OC_Log::write('chooser','Checking share '.$path.':'.$share['uid_owner'].'/'.$sharename.'/'.
 						':'.$sharepath.':'.$filepath, OC_Log::WARN);
-				if($path==$share['uid_owner'].'/'.$sharename ||
-						strpos($path, $share['uid_owner'].'/'.$sharename.'/')===0){
-							$info = \OCA\FilesSharding\Lib::getFileInfo($sharepath.$filepath, $share['uid_owner'],
+				if($path==$share['uid_owner'] /*this is to generate etag from shares*/ ||
+						$path==$share['uid_owner'].'/'.$sharename ||
+						strpos($path, $share['uid_owner'].'/'.$sharename.'/')===0 || empty($path)){
+					$info = \OCA\FilesSharding\Lib::getFileInfo($sharepath.'/'.$filepath, $share['uid_owner'],
 							/*$share['item_source']*//*Nope - don't use the ID of the shared folder*/'', '',
-									$this->auth_user, $group);
+							$this->auth_user, $group);
 					$server = \OCA\FilesSharding\Lib::getServerForUser($share['uid_owner'], false);
+					//$serverInternal = \OCA\FilesSharding\Lib::getServerForUser($share['uid_owner'], true);
 					$master = \OCA\FilesSharding\Lib::getMasterURL();
+					//$masterInternal = \OCA\FilesSharding\Lib::getMasterInternalURL();
 					$path = implode('/', array_map('rawurlencode', explode('/', ltrim($path, '/'))));
 					// This hack is to avoid that e.g. cyberduck shows the directory itself in the list of subdirectories.
 					// Which happens when listing e.g. /sharingin/test/ and then being redirected to
 					// /sharingout/test/.
 					// On the redirected end the @@ is stripped off and sharingout replaced with sharingin.
 					$redirect = rtrim((empty($server)?$master:$server), '/');
+					//$etagUrl = rtrim((empty($serverInternal)?$masterInternal:$serverInternal), '/').'/sharingout/'.$path;
 					$redirect = $redirect.(empty($_SERVER['HTTP_USER_AGENT']) ||
 							stripos($_SERVER['HTTP_USER_AGENT'], "cyberduck")===false?
 							'/sharingout/'.$path:
@@ -143,15 +161,72 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 						basename(dirname($_SERVER['REQUEST_URI']))==basename($path)){
 						$redirect = $redirect.'/'.basename($_SERVER['REQUEST_URI']);
 					}
-					$testEx = new \Exception();
-					OC_Log::write('chooser','Redirecting sharingin target '.$_SERVER['REQUEST_URI'].' : '.$path.' to '.
-					$share['uid_owner'].'-->'.$redirect.' : '.$testEx->getTraceAsString(), OC_Log::WARN);
-					\OC_Response::redirect($redirect);
-					exit();
+					/*if(!strlen($path)){
+						$etagUrl = $etagUrl.rawurlencode($share['uid_owner']).'/'.rawurlencode($sharename);
+					}*/
+					if($shareeRoot || !strlen($path)){
+						// Create getetag for sharingin/some.user@inst.dk/ by summing
+						// those of shared folders
+						/*OC_Log::write('chooser','Getting share etag for '.$path.' from '.$etagUrl, OC_Log::WARN);
+						$shareEtag= \OCA\FilesSharding\Lib::propfind($etagUrl, 'd:getetag', $this->auth_user);*/
+						$shareEtag = $info['etag'];
+						OC_Log::write('chooser','Setting etag for share '.$info['path'].' : '.
+								$sharename.' : '.$sharepath.' : '.$filepath.' : '.$path.' : '.$shareEtag.
+								' : '.(strpos($path, $share['uid_owner'].'/'.$sharename)===0), OC_Log::INFO);
+						if(empty($shareEtag)){
+							OC_Log::write('chooser','Error: getetag not found for '.$info['path'], OC_Log::ERROR);
+						}
+						elseif($setEtags){
+							$this->shareStrings[$share['uid_owner']] = (empty($this->shareStrings[$share['uid_owner']])?
+									"":$this->shareStrings[$share['uid_owner']]).$shareEtag;
+							$this->shareStrings[$share['uid_owner'].'/'.$sharename] = $shareEtag;
+						}
+					}
+					else{
+						$testEx = new \Exception();
+						OC_Log::write('chooser','Redirecting sharingin target '.$_SERVER['REQUEST_URI'].' : '.$path.' to '.
+								$share['uid_owner'].'-->'.$redirect.' : '.$testEx->getTraceAsString(), OC_Log::WARN);
+						\OC_Response::redirect($redirect);
+						exit();
+					}
 				}
 			}
-			if($found){
-				return new \OC_Connector_Sabre_Sharingin_Directory($path);
+			if(!strlen($path)){
+				$ret = $this->rootNode;
+				$etag = "";
+				foreach($this->shareStrings as $mypath=>$str){
+					if(preg_match('|^[^/]+$|', $mypath)){
+						$etag = $etag.$str;
+					}
+				}
+				$etag = substr(md5($etag), 0, 13);
+				OC_Log::write('chooser','Setting etag of /sharingin: '.$path.'->'.$etag, OC_Log::INFO);
+				$ret->setETag('"'.$etag.'"');
+			}
+			elseif($found){
+				$ret = new \OC_Connector_Sabre_Sharingin_Directory($path);
+				if($setEtags){
+					$etag = empty($path)?'':substr(md5($this->shareStrings[$path]), 0, 13);
+					$ret->setETag('"'.$etag.'"');
+					//$ret->setETag('"'.$this->shareStrings[$path].'"');
+					OC_Log::write('chooser','Setting etag '.$etag.' of '.$path, OC_Log::INFO);
+				}
+			}
+			else{
+				OC_Log::write('chooser','NOT Setting etag '.$etag.' of '.$path, OC_Log::INFO);
+			}
+			if(!empty($ret)){
+				if($setEtags){
+					foreach($this->shareStrings as $mypath=>$str){
+						if(!empty($str)){
+							$this->shareETags[$mypath] = substr(md5($str), 0, 13);
+						}
+					}
+				}
+				OC_Log::write('chooser','Setting etags '.$setEtags.' : '.serialize($this->shareStrings).'-->'.
+						serialize($this->shareETags), OC_Log::INFO);
+				$ret->setETags($this->shareETags);
+				return $ret;
 			}
 			throw new \Sabre\DAV\Exception\NotFound('File with name ' . $path . ' could not be located');
 		}

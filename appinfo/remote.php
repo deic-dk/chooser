@@ -45,9 +45,7 @@ OC_App::loadApps(array('filesystem','authentication'));
 OCP\App::checkAppEnabled('chooser');
 
 // This may be a browser accessing a webdav URL - and the browser may already be logged in
-if(OC_User::isLoggedIn()){
-	$loggedInUser = \OCP\USER::getUser();
-}
+$loggedInUser = \OCP\USER::getUser();
 
 if(OCP\App::isEnabled('user_group_admin')){
 	OC::$CLASSPATH['OC_User_Group_Admin_Backend'] ='apps/user_group_admin/lib/backend.php';
@@ -126,7 +124,7 @@ elseif(strpos(urldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/
 		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch'){
 			$_SERVER['REQUEST_URI'] = urldecode($_SERVER['REQUEST_URI']);
 }
-elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/remote.php/webdav/")===0){
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/remote.php/webdav")===0){
 	$baseuri = OC::$WEBROOT."/sharingin/remote.php/webdav";
 	$objectTree->sharingIn = true;
 	//$objectTree->allowUpload = false;
@@ -221,7 +219,7 @@ if(empty($user)){
 }
 if(empty($user) && $baseuri == OC::$WEBROOT."/sharingout"){
 	OC_Log::write('chooser','ERROR: no user '.serialize($_SERVER), OC_Log::WARN);
-	$server->httpResponse->setHeader('WWW-Authenticate: Basic realm="Share"');
+	$server->httpResponse->setHeader('WWW-Authenticate', 'Basic realm="Share"');
 	$server->httpResponse->sendStatus(401);
 	exit;
 }
@@ -260,6 +258,7 @@ $_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/davs|",
 //OC_Log::write('chooser','REQUEST '.serialize($_SERVER), OC_Log::WARN);
 //OC_Log::write('chooser','user '.$authPlugin->getCurrentUser(), OC_Log::WARN);
 
+$userServerAccess = \OCA\FilesSharding\Lib::$USER_ACCESS_ALL;
 if(!empty($_SERVER['BASE_URI'])){
 	// Accept include from remote.php from other apps and set root accordingly
 	if($_SERVER['BASE_URI']==OC::$WEBROOT."/remote.php/usage"){
@@ -368,11 +367,10 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 require_once('apps/chooser/appinfo/apache_note_user.php');
 
 $ok = true;
-if(\OCP\App::isEnabled('files_sharding')){
+if(!$objectTree->sharingOut && \OCP\App::isEnabled('files_sharding')){
 	$userServerAccess = \OCA\FilesSharding\Lib::getUserServerAccess();
 	// Block all access if account is locked on server
-	if(\OCP\App::isEnabled('files_sharding') &&
-			$userServerAccess==\OCA\FilesSharding\Lib::$USER_ACCESS_NONE){
+	if($userServerAccess==\OCA\FilesSharding\Lib::$USER_ACCESS_NONE){
 		$ok = false;
 	}
 }

@@ -250,20 +250,23 @@ curl -u fror@dtu.dk:dumdym123 --data-binary '<?xml version="1.0"?><oc:filter-fil
 	 * Small helper to support PROPFIND with DEPTH_INFINITY.
 	 */
 	private function addPathNodesRecursively(&$nodes, $path) {
-		// For depth inifinity requests on /sharingin/some_user, back off
+		// For depth inifinity requests on /sharingin/some_user,
+		// just return up to /sharingin/some_user/some_share1, ...
+		// Beyond that we'll be redirecting
 		if(!empty($this->tree->sharingIn) && $this->tree->sharingIn &&
-				substr_count($path, '/')>1){
+				substr_count($path, '/')>0){
 			return;
 		}
+		OC_Log::write('chooser','Adding children of: '.$path.'-->'.get_class($nodes[$path]), OC_Log::WARN);
 		foreach($this->tree->getChildren($path) as $childNode) {
-			OC_Log::write('chooser','Adding child: '.$path.'-->'.get_class($childNode), OC_Log::WARN);
 			if($this->excludePath($path) || $this->excludePath($path . '/' . $childNode->getName())){
 				continue;
 			}
 			if(!$this->mediaSearch || ($childNode instanceof \OC_Connector_Sabre_File &&
 					(substr($childNode->getContentType(), 0, 6)=="image/" ||
 							substr($childNode->getContentType(), 0, 6)=="movie/"))){
-				$nodes[$path . '/' . $childNode->getName()] = $childNode;
+					OC_Log::write('chooser','Adding child: '.$path.'/' . $childNode->getName().'-->'.get_class($childNode), OC_Log::WARN);
+					$nodes[$path . '/' . $childNode->getName()] = $childNode;
 			}
 			if ($childNode instanceof \Sabre\DAV\ICollection)
 				$this->addPathNodesRecursively($nodes, $path . '/' . $childNode->getName());
@@ -410,10 +413,14 @@ curl -u fror@dtu.dk:dumdym123 --data-binary '<?xml version="1.0"?><oc:filter-fil
 				$removeRT = true;
 			}
 			
-			if($node instanceof \OC_Connector_Sabre_Sharingin_Directory ||
-				$node instanceof \OC_Connector_Sabre_Sharingout_Directory ||
+			if($node instanceof \OC_Connector_Sabre_Sharingout_Directory ||
 				$node instanceof \OC_Connector_Sabre_Favorites_Directory){
 				$result = true;
+			}
+			elseif($node instanceof \OC_Connector_Sabre_Sharingin_Directory){
+				// beforeGetProperties() calls $node->getFileId() and $node->getDavPermissions()
+				// which we override in sharingin_directory.php
+				$result = $this->broadcastEvent('beforeGetProperties',array($myPath, $node, &$currentPropertyNames, &$newProperties));
 			}
 			else{
 				$result = $this->broadcastEvent('beforeGetProperties',array($myPath, $node, &$currentPropertyNames, &$newProperties));

@@ -4,10 +4,19 @@ require_once 'chooser/lib/oc_remote_view.php';
 
 class OC_Connector_Sabre_Sharingin_Directory extends OC_Connector_Sabre_Node
 	implements \Sabre\DAV\ICollection, \Sabre\DAV\IQuota {
-
-		public function __construct($path='/') {
+	
+		private $etag = '';
+		private $shareETags = array();
+		
+		public function __construct($path='/', $info=null) {
 			$this->path = $path;
-			$this->info = new \OC\Files\FileInfo('/', -1, '/', array('mtime'=>0));
+			if(empty($info)){
+				// $path, $storage, $internalPath, $data
+				$this->info = new \OC\Files\FileInfo('/', -1, '/', array('mtime'=>0));
+			}
+			else{
+				$this->info = $info;
+			}
 		}
 			
 	/**
@@ -42,10 +51,16 @@ class OC_Connector_Sabre_Sharingin_Directory extends OC_Connector_Sabre_Node
 			throw new \Sabre\DAV\Exception\NotFound('Need more info!');
 		}
 		$this->fileView = new OC_Remote_View();
-		if ($info['mimetype'] == 'httpd/unix-directory') {
+		if(preg_match('|^[^/]+$|', $name)){
+			\OC_Log::write('chooser','Returning OC_Connector_Sabre_Sharingin_Directory '.$name.':'.$info['fileid'], \OC_Log::WARN);
+			$node = new \OC_Connector_Sabre_Sharingin_Directory($name, $info);
+			$node->setETag($info['etag']);
+		}
+		elseif($info['mimetype'] == 'httpd/unix-directory'){
 			\OC_Log::write('chooser','Returning OC_Connector_Sabre_Directory '.$name.':'.$info['fileid'], \OC_Log::WARN);
 			$node = new OC_Connector_Sabre_Directory($this->fileView, $info);
-		} else {
+		}
+		else{
 			$node = new OC_Connector_Sabre_File($this->fileView, $info);
 		}
 		return $node;
@@ -69,8 +84,14 @@ class OC_Connector_Sabre_Sharingin_Directory extends OC_Connector_Sabre_Node
 				$owners[] = $share['uid_owner'];
 				$info = new \OC\Files\FileInfo($share['uid_owner'],
 						\OC\Files\Filesystem::getStorage('/'.$share['uid_owner'].'/'),
-						$share['uid_owner'], array('fileid'=>-1, 'permissions'=>1, 'mimetype'=>'httpd/unix-directory',
-								'size'=>0, 'etag'=>'', 'mtime'=>$share['stime']));
+						$share['uid_owner'], array(
+								'fileid'=>substr(
+										md5(empty($share['item_source'])?$share['uid_owner']:$share['item_source']),
+										0, 21),
+								'permissions'=>'S',
+								'mimetype'=>'httpd/unix-directory', 'size'=>0,
+								'etag'=>empty($this->shareETags[$share['uid_owner']])?'':$this->shareETags[$share['uid_owner']],
+								'mtime'=>$share['stime']));
 						OC_Log::write('chooser','Getting child '.$share['uid_owner'], OC_Log::WARN);
 				$node = $this->getChild($share['uid_owner'], $info);
 			}
@@ -130,8 +151,41 @@ class OC_Connector_Sabre_Sharingin_Directory extends OC_Connector_Sabre_Node
 			return array(0, 0);
 	}
 
+	public function setETag($etag) {
+		$this->etag = $etag;
+	}
+	
 	public function getProperties($properties) {
-		return array();
+		$props = array();
+		$props[self::GETETAG_PROPERTYNAME] = $this->etag;
+		return $props;
+	}
+	
+	public function updateProperties($properties) {
+		return true;
+	}
+	
+	public function getETag(){
+		return $this->etag;
+	}
+	
+	public function setETags($etags){
+		$this->shareETags = $etags;
+	}
+	
+	public function getDavPermissions() {
+		return 'S';
+	}
+	
+	public function getFileId() {
+		if($this->path!='/' && !empty($this->info->getId())){
+			return $this->info->getId();
+		}
+		$user = \OC_User::getUser();
+		if(empty($user)){
+			return null;
+		}
+		return substr(md5($user), 0, 21);
 	}
 
 }

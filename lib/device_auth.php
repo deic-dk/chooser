@@ -45,7 +45,7 @@ class Device extends AbstractBasic {
 		$forcePortable = (CRYPT_BLOWFISH != 1);
 		$hasher = new \PasswordHash(8, $forcePortable);
 		foreach($device_tokens as $device_name=>$storedHash){
-			\OCP\Util::writeLog('chooser', 'Checking '.$storedHash.' : '.
+			\OCP\Util::writeLog('chooser', 'Checking '.$username.' : '.$storedHash.' : '.
 					$password, \OC_Log::DEBUG);
 			if($hasher->CheckPassword($password . \OC_Config::getValue('passwordsalt', ''), $storedHash)){
 				$user_id = $username;
@@ -64,7 +64,7 @@ class Device extends AbstractBasic {
 			\OC_User::setUserId($user_id);
 			\OC_Util::setUpFS($user_id);
 			\OCP\Util::writeLog('chooser', 'Validated password '.\OC_User::isLoggedIn().
-					' : '.$password.' : '.$device_name.'=>'.$storedHash .' for '.$username.' : '.
+					' : '.$device_name.'=>'.$storedHash .' for '.$username.' : '.
 					$_SERVER['REQUEST_URI'], \OC_Log::WARN);
 			return true;
 		}
