@@ -301,7 +301,9 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 		}
 		
 		elseif(isset($this->favorites) && $this->favorites){
-			OC_Log::write('chooser','ERROR: we should not get here...'.$path, OC_Log::ERROR);
+			//$e = new \Exception();
+			//OC_Log::write('chooser','ERROR: we should not get here...'.$e->getTraceAsString(), OC_Log::ERROR);
+			return $this->rootNode;
 		}
 		
 		if(empty($info)){
