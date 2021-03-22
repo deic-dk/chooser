@@ -4,7 +4,7 @@ require_once('apps/chooser/lib/lib_chooser.php');
 require_once('apps/chooser/lib/device_auth.php');
 
 // This is to add device auth to the /ocs/ stuff called by the sync clients.
-if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/ocs/")===0){
+if(!empty($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/ocs/")===0){
 	OCP\Util::connectHook('OC', 'initSession', 'Sabre\DAV\Auth\Backend\Device', 'login');
 }
 

@@ -81,7 +81,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 
 		$path = trim($path, '/');
 		if(empty($this->sharingIn) && isset($this->cache[$path])){
-			OC_Log::write('chooser','Returning cache '.$path, OC_Log::WARN);
+			OC_Log::write('chooser','Returning cache '.$path, OC_Log::INFO);
 			return $this->cache[$path];
 		}
 
