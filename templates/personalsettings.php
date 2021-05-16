@@ -1,4 +1,7 @@
-<?php OCP\Util::addStyle('chooser', 'personalsettings');?>
+<?php
+OCP\Util::addStyle('chooser', 'personalsettings');
+$l = OC_L10N::get('chooser');
+?>
 
 <fieldset class="section">
 	<h2><?php p($l->t('Data processing access control')); ?></h2>

@@ -1,5 +1,6 @@
 <?php
 $themepath = OC::$WEBROOT.'/themes/'.OC_Util::getTheme();
+$l = OC_L10N::get('chooser');
 ?>
 <header>
 	<div id="header" class="text-center">
