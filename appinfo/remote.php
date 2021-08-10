@@ -120,9 +120,10 @@ if(urldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/files/".
 	$objectTree->favorites = true;
 }
 elseif(strpos(urldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
-		$user."/")===0 &&
-		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch'){
+		$user."/")===0 /*&&
+		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch'*/){
 			$_SERVER['REQUEST_URI'] = urldecode($_SERVER['REQUEST_URI']);
+			$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/remote.php/webdav")===0){
 	$baseuri = OC::$WEBROOT."/sharingin/remote.php/webdav";
@@ -242,13 +243,13 @@ $server->addPlugin(new OC_Connector_Sabre_ExceptionLoggerPlugin('davs'));
 if(!$favoriteLink && empty($objectTree->favorites)){
 	$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/webdav|",
 		OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
-	$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/dav/files/".
-		/*$authPlugin->getCurrentUser()*/$user."|", OC::$WEBROOT."/remote.php/mydav/",
-		$_SERVER['REQUEST_URI']);
+	//$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/dav/files/".
+	//	/*$authPlugin->getCurrentUser()*/$user."|", OC::$WEBROOT."/remote.php/mydav/",
+	//	$_SERVER['REQUEST_URI']);
 	$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/davs|",
 			OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
-	$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/dav|",
-		OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
+	//$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/*remote.php/dav|",
+		//OC::$WEBROOT."/remote.php/mydav/", $_SERVER['REQUEST_URI']);
 }
 
 // Accept include by remote.php from files_sharding.
