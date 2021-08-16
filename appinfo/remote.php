@@ -284,6 +284,7 @@ if(!empty($_SERVER['BASE_URI'])){
 // In the case of a move request, a header will contain the destination
 // with hard-wired host name.
 if(!empty($_SERVER['HTTP_DESTINATION'])){
+	$_SERVER['HTTP_DESTINATION'] = urldecode($_SERVER['HTTP_DESTINATION']);
 	$_SERVER['HTTP_DESTINATION'] = preg_replace("|^(https*://[^/]+)".OC::$WEBROOT."/*remote.php/webdav|",
 			"$1".OC::$WEBROOT."/remote.php/mydav/", $_SERVER['HTTP_DESTINATION']);
 	// Accept include by remote.php from files_sharding.
