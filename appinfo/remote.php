@@ -281,6 +281,11 @@ if(!empty($_SERVER['BASE_URI'])){
 	$server->setBaseUri($_SERVER['BASE_URI']);
 }
 
+// Set by files_sharding/remote.php
+if(!empty($_SERVER['READ_ONLY'])){
+	$userServerAccess = \OCA\FilesSharding\Lib::$USER_ACCESS_READ_ONLY;
+}
+
 // In the case of a move request, a header will contain the destination
 // with hard-wired host name.
 if(!empty($_SERVER['HTTP_DESTINATION'])){
