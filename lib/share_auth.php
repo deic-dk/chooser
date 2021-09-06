@@ -26,6 +26,7 @@ class Share extends AbstractBasic {
 		$forcePortable = (CRYPT_BLOWFISH != 1);
 		$hasher = new \PasswordHash(8, $forcePortable);
 		if(!($hasher->CheckPassword($password.\OC_Config::getValue('passwordsalt', ''), $storedPwHash))){
+			\OC_Log::write('chooser','Password validation failed: '.$password.', hash: '.$storedPwHash.', owner: '.$owner, \OC_Log::WARN);
 			return null;
 		}
 		return $owner;
@@ -40,12 +41,32 @@ class Share extends AbstractBasic {
 		$reqUri = urldecode(\OCP\Util::getRequestUri());
 		$reqPath = substr($reqUri, strlen(self::$baseUri));
 		$reqPath = \OC\Files\Filesystem::normalizePath($reqPath);
-		$token = preg_replace("/^\/([^\/]*)\/.*$/", "$1", $reqPath);
-		$token = preg_replace("/^\/([^\/]*)$/", "$1", $token);
+		
+		$token = preg_replace("/^\/([^\/]+)\/.*$/", "$1", $reqPath);
+		$token = preg_replace("/^\/([^\/]+)$/", "$1", $reqPath);
 		if(!empty($token) && $token!=$reqPath && $baseuri==\OC::$WEBROOT."/public"){
-			return $this->setupFromToken($token);
+			$res = $this->setupFromToken($token);
+			if($res){
+				return $res;
+			}
 		}
-		elseif($baseuri==\OC::$WEBROOT."/sharingout"){
+		
+		// setupFromToken failed. This may or may not be a share from a group folder. Just try.
+		$token = preg_replace("/^\/([^\/]+)\/([^\/]+)\/.*$/", "$2", $reqPath);
+		$token = preg_replace("/^\/([^\/]+)\/([^\/]+)$/", "$2", $reqPath);
+		$group = "";
+		$group = preg_replace("/^\/([^\/]+)\/([^\/]+)\/.*$/", "$1", $reqPath);
+		$group = preg_replace("/^\/([^\/]+)\/([^\/]+)$/", "$1", $reqPath);
+		if($group==$reqPath){
+			$group = "";
+		}
+		else{
+			if(!empty($token) && $token!=$reqPath && $baseuri==\OC::$WEBROOT."/public"){
+				return $this->setupFromToken($token, $group);
+			}
+		}
+		
+		if($baseuri==\OC::$WEBROOT."/sharingout"){
 			$this->sharingOut = true;
 			return $this->setupSharingout($reqPath);
 		}
@@ -106,12 +127,25 @@ class Share extends AbstractBasic {
 		return true;
 	}
 	
-	private function setupFromToken($token){
+	private function setupFromToken($token, $group=""){
 		if(!\OCP\App::isEnabled('files_sharding') || \OCA\FilesSharding\Lib::isMaster()){
-			$linkedItem = \OCP\Share::getShareByToken($token, false);
+			if(!empty($group)){
+				\OC\Files\Filesystem::tearDown();
+				$groupDir = '/'.$this->authUser.'/user_group_admin/'.$group;
+				\OC\Files\Filesystem::init($this->authUser, $groupDir);
+				$linkedItem = \OCP\Share::getShareByToken($token, false);
+			}
+			else{
+				$linkedItem = \OCP\Share::getShareByToken($token, false);
+			}
 		}
 		else{
-			$linkedItem = \OCA\FilesSharding\Lib::ws('getShareByToken', array('t'=>$token));
+			if(!empty($group)){
+				$linkedItem = \OCA\FilesSharding\Lib::ws('getShareByToken', array('t'=>urlencode($token), 'g'=>urlencode($group)));
+			}
+			else{
+				$linkedItem = \OCA\FilesSharding\Lib::ws('getShareByToken', array('t'=>$token));
+			}
 		}
 		if(empty($linkedItem)){
 			return false;
@@ -127,17 +161,24 @@ class Share extends AbstractBasic {
 			}
 			else{
 				$rootLinkItem = \OCA\FilesSharding\Lib::ws('resolveReShare',
-					array('linkItem'=>\OCP\JSON::encode($linkedItem)), true, true);
+						array('linkItem'=>\OCP\JSON::encode($linkedItem), 'group'=>urlencode($group)), true, true);
 			}
 			if (isset($rootLinkItem['uid_owner'])) {
 				\OCP\JSON::checkUserExists($rootLinkItem['uid_owner']);
 				\OC_Util::tearDownFS();
-				\OC_Util::setupFS($rootLinkItem['uid_owner']);
+				if(!empty($group)){
+					\OC\Files\Filesystem::tearDown();
+					$groupDir = '/'.$rootLinkItem['uid_owner'].'/user_group_admin/'.$group;
+					\OC\Files\Filesystem::init($rootLinkItem['uid_owner'], $groupDir);
+				}
+				else{
+					\OC_Util::setupFS($rootLinkItem['uid_owner']);
+				}
 				$this->token = $token;
 				$this->path = \OC\Files\Filesystem::getPath($rootLinkItem['item_source']);
 				$this->path = preg_replace("/^\//", "", $this->path);
-				$linkItem['path'] = $this->path;
-				\OC_Log::write('chooser','Token: '.$token.', path: '.$this->path.', owner: '.$rootLinkItem['uid_owner'], \OC_Log::WARN);
+				$linkedItem['path'] = $this->path;
+				\OC_Log::write('chooser','Token: '.$token.', path: '.$this->path.', group: '.$group.', owner: '.$rootLinkItem['uid_owner'], \OC_Log::WARN);
 			}
 		}
 		if($this->path==null || !isset($linkedItem['item_type'])){
