@@ -2,8 +2,8 @@
 $TRANSLATIONS = array(
 		"Save" => "Gem",
 		"Data processing access control" => "Adgangskontrol for databehandling",
-		"Allow access from your own compute nodes" => "Tillad adgang fra egne beregningsnoder",
-		"Needed for file access from your virtual machines" => "Nødvendig for at dine virtuelle maskiner kan tilgå dine data",
+		"Allow access from your own pods" => "Tillad adgang fra egne pods",
+		"Needed for file access from your pods/containers" => "Nødvendig for at dine pods/containere kan tilgå dine data",
 		"Allow authentication with your personal X.509 certificate:" => "Tillad autentificering med personligt X.509-certifikat",
 		"Certificate subject" => "Certifikatets DN",
 		"Choose" => "Vælg",

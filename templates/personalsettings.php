@@ -6,9 +6,9 @@ $l = OC_L10N::get('chooser');
 <fieldset class="section">
 	<h2><?php p($l->t('Data processing access control')); ?></h2>
 	
-	<?php p($l->t('Allow access from your own compute nodes')); ?>
+	<?php p($l->t('Allow access from your own pods')); ?>
 	<input type="checkbox" id="allow_internal_dav" value="0"
-		   title="<?php p($l->t( 'Needed for file access from your virtual machines' )); ?>"
+		   title="<?php p($l->t( 'Needed for file access from your pods/containers' )); ?>"
 		   <?php if ($_['is_enabled'] == 'yes'): ?> checked="checked"<?php endif; ?> />
 		   
 	<br />
