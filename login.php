@@ -1,8 +1,5 @@
 <?php
 
-\OCP\Util::writeLog('status', 'REQUEST: '.$_SERVER['REQUEST_URI'].'-->'.serialize($_REQUEST), \OC_Log::WARN);
-\OCP\Util::writeLog('status', 'HEADERS: '.serialize(getallheaders()), \OC_Log::WARN);
-
 try {
 	$inc = "../../lib/base.php";
 	if(file_exists($inc) && is_readable($inc)){
@@ -14,6 +11,11 @@ try {
 	require_once 'lib/lib_chooser.php';
 	require_once('apps/files_sharding/lib/lib_files_sharding.php');
 	
+	\OCP\Util::writeLog('status', 'REQUEST: '.$_SERVER['REQUEST_URI'].'-->'.serialize($_REQUEST), \OC_Log::WARN);
+	\OCP\Util::writeLog('status', 'HEADERS: '.serialize(getallheaders()), \OC_Log::WARN);
+	
+	$extraRoot = empty($_REQUEST['extraroot'])?"":$_REQUEST['extraroot'];
+	
 	$nowDate = new \DateTime();
 	$now = $nowDate->getTimestamp();
 	
@@ -24,10 +26,10 @@ try {
 		if(!empty($user) && $user!='guest'){
 			\OC_Chooser::deleteToken($_POST['token']);
 			/*$server = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http").
-				"://".$_SERVER[HTTP_HOST].OC::$WEBROOT;*/
+				"://".$_SERVER[HTTP_HOST].OC::$WEBROOT.$extraRoot;*/
 			$server = \OCA\FilesSharding\Lib::getServerForUser($user);
 			$values=array(
-				"server"=>$server,
+				"server"=>rtrim($server, "/")."/".(empty($extraRoot)?"":$extraRoot),
 				"loginName"=>$user,
 				"appPassword"=>$_POST['token']
 			);
@@ -72,6 +74,7 @@ try {
 		$token = $_GET['token'];
 		$device_tokens = \OC_Chooser::getDeviceTokens($user);
 		$server = OCA\FilesSharding\Lib::getServerForUser($user);
+		$server = rtrim($server, "/")."/".(empty($extraRoot)?"":$extraRoot);
 		$tmpl = new OCP\Template('chooser', 'device_token', 'guest');
 		$tmpl->assign('user', $user);
 		$tmpl->assign('server', $server);
@@ -85,7 +88,8 @@ try {
 		$tmpl->printPage();
 	}
 	// Redirected here by mod_rewrite of index.php/login/flow - which is called by the Nextcloud Android client
-	elseif(isset($_GET['orig_uri']) && $_GET['orig_uri']==trim((OC::$WEBROOT.'/index.php/login/flow'), '/')){
+	elseif(isset($_GET['orig_uri']) && ($_GET['orig_uri']==trim((OC::$WEBROOT.'/index.php/login/flow'), '/') ||
+			!empty($extraRoot) && $_GET['orig_uri']==trim(OC::$WEBROOT.$extraRoot.'/index.php/login/flow', '/'))){
 		/*if(stripos($_SERVER['HTTP_USER_AGENT'], "iOS")!==false){
 			header('HTTP/1.0 404 Not Found');
 			exit();
@@ -93,7 +97,7 @@ try {
 		$token = ''.md5(uniqid(mt_rand(), true));
 		\OC_Chooser::setToken('guest', 'token_'.$token.'_'.$now, $token);
 		\OC_Response::redirect(OC::$WEBROOT."/?redirect_url=".OC::$WEBROOT.
-				"/apps/chooser/login.php?token=".$token."&flow=true");
+				"/apps/chooser/login.php?token=".$token."&flow=true".(empty($extraRoot)?"":"&extraroot=$extraRoot"));
 	}
 	elseif(!empty($_GET['server'])&&!empty($_GET['user'])&&!empty($_GET['password'])){
 		\OC_Response::redirect(
@@ -103,7 +107,7 @@ try {
 	// Redirected here by mod_rewrite of index.php/login/v2 - which is called by the Nextcloud iPhone client
 	else{
 		// Used to prove this is indeed the client that will be authenticated above
-		$pollingValue = json_encode(\OC_Chooser::pollingValues(), JSON_UNESCAPED_SLASHES);
+		$pollingValue = json_encode(\OC_Chooser::pollingValues($extraRoot), JSON_UNESCAPED_SLASHES);
 		\OCP\Util::writeLog('remote', 'Returning json to poller: ' . $pollingValue, \OCP\Util::WARN);
 		echo $pollingValue;
 		exit;

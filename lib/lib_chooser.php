@@ -255,7 +255,7 @@ class OC_Chooser {
 		}
 	}
 	
-	public static function pollingValues(){
+	public static function pollingValues($extraRoot=""){
 		//require_once('apps/files_sharding/lib/lib_files_sharding.php');
 		$nowDate = new \DateTime();
 		$now = $nowDate->getTimestamp();
@@ -268,7 +268,8 @@ class OC_Chooser {
 		$values = array(
 				//"login"=>\OCA\FilesSharding\Lib::getMasterURL().
 				"login"=>$actual_host.
-				"?redirect_url=".OC::$WEBROOT."/apps/chooser/login.php?token=".$token,
+				"?redirect_url=".urlencode(OC::$WEBROOT."/apps/chooser/login.php?".
+				(empty($extraRoot)?"":"extraroot=".$extraRoot."&")."token=".$token),
 				"poll"=>array("token"=>$token, "endpoint"=>$actual_link));
 		return $values;
 	}

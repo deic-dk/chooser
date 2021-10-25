@@ -226,6 +226,10 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		if(!empty($this->tree->sharingInOut) && $this->tree->sharingInOut){
 			$data = str_replace('<d:href>/sharingout/', '<d:href>/sharingin/', $data);
 		}
+		if(!empty($this->tree->sharingIn) && $this->tree->sharingIn){
+			$data = str_replace('<oc:permissions></oc:permissions>', '<oc:permissions>S</oc:permissions>', $data);
+		}
+		OC_Log::write('chooser','PROPFIND: '.$data, OC_Log::DEBUG);
 		if($this->favoriteSearch){
 			$user = \OCP\USER::getUser();
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/mydav/',
@@ -458,8 +462,9 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 
 			foreach($currentPropertyNames as $prop) {
 				OC_Log::write('chooser','PROP: '.$myPath.'-->'.$prop, OC_Log::INFO);
-				if (isset($newProperties[200][$prop])) continue;
-
+				if(isset($newProperties[200][$prop])){
+					continue;
+				}
 				switch($prop) {
 					case '{DAV:}getlastmodified'       :
 						if ($node->getLastModified()){
@@ -487,8 +492,16 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 							$newProperties[200][$prop] = $quotaInfo[1];
 						}
 						break;
-					case '{DAV:}getetag'               : if ($node instanceof \Sabre\DAV\IFile && $etag = $node->getETag())  $newProperties[200][$prop] = $etag; break;
-					case '{DAV:}getcontenttype'        : if ($node instanceof \Sabre\DAV\IFile && $ct = self::unsecureContentType($path, $node->getContentType()))  $newProperties[200][$prop] = $ct; break;
+					case '{DAV:}getetag':
+						if($node instanceof \Sabre\DAV\IFile && $etag = $node->getETag()){
+							$newProperties[200][$prop] = $etag;
+						}
+						break;
+					case '{DAV:}getcontenttype'        :
+						if($node instanceof \Sabre\DAV\IFile && $ct = self::unsecureContentType($path, $node->getContentType())){
+							$newProperties[200][$prop] = $ct;
+						}
+						break;
 					case '{DAV:}supported-report-set'  :
 						$reports = array();
 						foreach($this->plugins as $plugin) {
@@ -519,7 +532,9 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				}
 
 				// If we were unable to find the property, we will list it as 404.
-				if (!$allProperties && !isset($newProperties[200][$prop])) $newProperties[404][$prop] = null;
+				if(!$allProperties && !isset($newProperties[200][$prop])){
+					$newProperties[404][$prop] = null;
+				}
 
 			}
 
