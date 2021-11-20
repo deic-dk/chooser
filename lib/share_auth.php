@@ -42,8 +42,9 @@ class Share extends AbstractBasic {
 		$reqPath = substr($reqUri, strlen(self::$baseUri));
 		$reqPath = \OC\Files\Filesystem::normalizePath($reqPath);
 		
-		$token = preg_replace("/^\/([^\/]+)\/.*$/", "$1", $reqPath);
-		$token = preg_replace("/^\/([^\/]+)$/", "$1", $reqPath);
+		$token = preg_replace("/^\/*([^\/]+)\/*.*$/", "$1", $reqPath);
+		$token = preg_replace("/^\/*([^\/]+)$/", "$1", $token);
+		\OC_Log::write('chooser','Setting up share from token: '.$token, \OC_Log::WARN);
 		if(!empty($token) && $token!=$reqPath && $baseuri==\OC::$WEBROOT."/public"){
 			$res = $this->setupFromToken($token);
 			if($res){
@@ -197,7 +198,7 @@ class Share extends AbstractBasic {
 		}
 		if($this->userId!=null && trim($this->userId)!==''){
 			if(\OC_Appconfig::getValue('core', 'shareapi_allow_public_upload', 'yes')==='yes'){
-				\OC_Log::write('chooser','Permissions: '.$linkedItem['permissions'], \OC_Log::INFO);
+				\OC_Log::write('chooser','Permissions: '.$linkedItem['permissions'], \OC_Log::WARN);
 				$this->allowUpload = (bool) ($linkedItem['permissions'] & \OCP\PERMISSION_CREATE);
 			}
 		}

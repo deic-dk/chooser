@@ -336,7 +336,7 @@ $server->subscribeEvent('beforeMethod', function () use ($server, $objectTree) {
 			if(empty($user)){
 				$user = $_SERVER['PHP_AUTH_USER'];
 			}
-			OC_Log::write('chooser','Non-files access: '.$user.': '.$_SERVER['REQUEST_URI'].
+			OC_Log::write('chooser','Non-files access: '.$user.': '.$_SERVER['REQUEST_URI'].':'.OC_Request::requestUri().
 					'-->'.$_SERVER['BASE_DIR'], OC_Log::WARN);
 			\OC\Files\Filesystem::tearDown();
 			\OC\Files\Filesystem::init($user, $_SERVER['BASE_DIR']);
