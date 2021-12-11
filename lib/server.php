@@ -287,8 +287,13 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 	* Content-type to text/html instead of the more secure text/plain.
 	*/
 	private static function unsecureContentType($filepath, $contentType){
-		if(substr($filepath, -5)===".html"){
+		if(strtolower(substr($filepath, -5))===".html"){
 			$contentType = "text/html";
+		}
+		// Fix up quicktime files, so iPads, iPhones will play
+		elseif(strtolower(substr($filepath, -4))===".mov"){
+			$contentType = "video/mp4";
+			//$contentType = "";
 		}
 		return $contentType;
 	}
@@ -466,13 +471,13 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 					continue;
 				}
 				switch($prop) {
-					case '{DAV:}getlastmodified'       :
+					case '{DAV:}getlastmodified':
 						if ($node->getLastModified()){
 							$newProperties[200][$prop] =
 							new \Sabre\DAV\Property\GetLastModified($node->getLastModified());
 						}
 						break;
-					case '{DAV:}getcontentlength'      :
+					case '{DAV:}getcontentlength':
 						if ($node instanceof \Sabre\DAV\IFile) {
 							$size = $node->getSize();
 							if (!is_null($size)) {
@@ -480,13 +485,13 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 							}
 						}
 						break;
-					case '{DAV:}quota-used-bytes'      :
+					case '{DAV:}quota-used-bytes':
 						if ($node instanceof \Sabre\DAV\IQuota) {
 							$quotaInfo = $node->getQuotaInfo();
 							$newProperties[200][$prop] = $quotaInfo[0];
 						}
 						break;
-					case '{DAV:}quota-available-bytes' :
+					case '{DAV:}quota-available-bytes':
 						if ($node instanceof \Sabre\DAV\IQuota) {
 							$quotaInfo = $node->getQuotaInfo();
 							$newProperties[200][$prop] = $quotaInfo[1];
@@ -497,19 +502,19 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 							$newProperties[200][$prop] = $etag;
 						}
 						break;
-					case '{DAV:}getcontenttype'        :
-						if($node instanceof \Sabre\DAV\IFile && $ct = self::unsecureContentType($path, $node->getContentType())){
+					case '{DAV:}getcontenttype':
+						if($node instanceof \Sabre\DAV\IFile && $ct = self::unsecureContentType($myPath, $node->getContentType())){
 							$newProperties[200][$prop] = $ct;
 						}
 						break;
-					case '{DAV:}supported-report-set'  :
+					case '{DAV:}supported-report-set':
 						$reports = array();
 						foreach($this->plugins as $plugin) {
 							$reports = array_merge($reports, $plugin->getSupportedReportSet($myPath));
 						}
 						$newProperties[200][$prop] = new \Sabre\DAV\Property\SupportedReportSet($reports);
 						break;
-					case '{DAV:}resourcetype' :
+					case '{DAV:}resourcetype':
 						$newProperties[200]['{DAV:}resourcetype'] = new \Sabre\DAV\Property\ResourceType();
 						foreach($this->resourceTypeMapping as $className => $resourceType) {
 							if ($node instanceof $className) $newProperties[200]['{DAV:}resourcetype']->add($resourceType);
