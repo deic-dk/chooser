@@ -130,7 +130,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 					$share['uid_owner'].'/'.$sharename?
 					preg_replace('|^'.$share['uid_owner'].'/'.$sharename.'|', '', $path):'';
 				OC_Log::write('chooser','Checking share '.$path.':'.$share['uid_owner'].'/'.$sharename.'/'.
-						':'.$sharepath.':'.$filepath, OC_Log::WARN);
+						':'.$sharepath.':'.$filepath.':'.$_SERVER['REQUEST_URI'].':'.$this->sharingIn, OC_Log::INFO);
 				if($path==$share['uid_owner'] /*this is to generate etag from shares*/ ||
 						$path==$share['uid_owner'].'/'.$sharename ||
 						strpos($path, $share['uid_owner'].'/'.$sharename.'/')===0 || empty($path)){
@@ -404,6 +404,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			$this->markDirty($destinationDir);
 		}
 		else{
+			\OCP\Util::writeLog('Chooser', 'Moving: '.$sourcePath.' --> '.$destinationPath, \OCP\Util::WARN);
 			return parent::move($sourcePath, $destinationPath);
 		}
 	}
