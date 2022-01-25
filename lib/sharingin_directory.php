@@ -81,9 +81,12 @@ class OC_Connector_Sabre_Sharingin_Directory extends OC_Connector_Sabre_Node
 				if(in_array($share['uid_owner'], $owners)){
 					continue;
 				}
+				// The storage ID is only available for local users
+				//$storage = \OC\Files\Filesystem::getStorage('/'.$share['uid_owner'].'/');
+				$storage = null;
 				$owners[] = $share['uid_owner'];
 				$info = new \OC\Files\FileInfo($share['uid_owner'],
-						\OC\Files\Filesystem::getStorage('/'.$share['uid_owner'].'/'),
+						$storage,
 						$share['uid_owner'], array(
 								'fileid'=>substr(
 										md5(empty($share['item_source'])?$share['uid_owner']:$share['item_source']),
