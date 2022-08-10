@@ -110,20 +110,25 @@ if(empty($user)){
 
 // TODO: more thorough check. Currently the favorites call from iOS
 // seems to be the only one using REPORT. We can't rely on that in the future.
-if(urldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/files/".
+if((rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/files/".
 		$user ||
-		strpos(urldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
-		$user."/")===0 &&
+		strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
+		$user."/")===0) &&
 		strtolower($_SERVER['REQUEST_METHOD'])=='report'){
-	$_SERVER['REQUEST_URI'] = urldecode($_SERVER['REQUEST_URI']);
+			$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
 	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
 	$objectTree->favorites = true;
 }
-elseif(strpos(urldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
+elseif(strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
 		$user."/")===0 /*&&
 		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch'*/){
-			$_SERVER['REQUEST_URI'] = urldecode($_SERVER['REQUEST_URI']);
+		$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
 			$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
+}
+elseif(strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/sharingin/remote.php/dav/files/".
+		$user."/")===0){
+			$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
+		$baseuri = OC::$WEBROOT."/sharingin/remote.php/dav/files/".$user;
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/remote.php/webdav")===0){
 	$baseuri = OC::$WEBROOT."/sharingin/remote.php/webdav";
@@ -289,7 +294,7 @@ if(!empty($_SERVER['READ_ONLY'])){
 // In the case of a move request, a header will contain the destination
 // with hard-wired host name.
 if(!empty($_SERVER['HTTP_DESTINATION'])){
-	$_SERVER['HTTP_DESTINATION'] = urldecode($_SERVER['HTTP_DESTINATION']);
+	$_SERVER['HTTP_DESTINATION'] = rawurldecode($_SERVER['HTTP_DESTINATION']);
 	$_SERVER['HTTP_DESTINATION'] = preg_replace("|^(https*://[^/]+)".OC::$WEBROOT."/*remote.php/webdav|",
 			"$1".OC::$WEBROOT."/remote.php/mydav/", $_SERVER['HTTP_DESTINATION']);
 	// Accept include by remote.php from files_sharding.
