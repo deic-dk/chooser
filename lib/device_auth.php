@@ -65,7 +65,7 @@ class Device extends AbstractBasic {
 			\OC_Util::setUpFS($user_id);
 			\OCP\Util::writeLog('chooser', 'Validated password '.\OC_User::isLoggedIn().
 					' : '.$device_name.'=>'.$storedHash .' for '.$username.' : '.
-					$_SERVER['REQUEST_URI'], \OC_Log::WARN);
+					$_SERVER['REQUEST_URI'], \OC_Log::INFO);
 			return true;
 		}
 		else{
