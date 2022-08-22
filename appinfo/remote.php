@@ -119,6 +119,11 @@ if((rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/files/"
 	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
 	$objectTree->favorites = true;
 }
+elseif($_SERVER['REQUEST_URI']==OC::$WEBROOT."/remote.php/dav") /*&&
+		strtolower($_SERVER['REQUEST_METHOD'])=='head'*/){
+		$_SERVER['REQUEST_URI'] = $_SERVER['REQUEST_URI'];
+		$baseuri = OC::$WEBROOT."/remote.php/dav";
+}
 elseif(strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
 		$user."/")===0 /*&&
 		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch'*/){
