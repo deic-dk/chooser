@@ -266,7 +266,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				substr_count($path, '/')>0){
 			return;
 		}
-		OC_Log::write('chooser','Adding children of: '.$path.'-->'.get_class($nodes[$path]), OC_Log::WARN);
+		OC_Log::write('chooser','Adding children of: '.$path.'-->'.get_class($nodes[$path]), OC_Log::INFO);
 		foreach($this->tree->getChildren($path) as $childNode) {
 			if($this->excludePath($path) || $this->excludePath($path . '/' . $childNode->getName())){
 				continue;
@@ -520,7 +520,18 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 							if ($node instanceof $className) $newProperties[200]['{DAV:}resourcetype']->add($resourceType);
 						}
 						break;
-					//case '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite' :
+					case '{' . self::NS_NEXTCLOUD . '}has-preview':
+						if($node instanceof \Sabre\DAV\IFile){
+							OC_Log::write('chooser','PROP: '.$myPath.'-->'.$prop.'-->'.get_class($node), OC_Log::WARN);
+							if($node->getContentType()=="application/pdf" ||
+									substr($node->getContentType(), 0, 6)=="image/" || substr($node->getContentType(), 0, 5)=="text/"){
+								$newProperties[200][$prop] = 'true';
+							}
+						}
+						else{
+						}
+						break;
+						//case '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite' :
 						//OC_Log::write('chooser','FAVORITE REQUEST --> '.$myPath, OC_Log::WARN);
 						// We don't care about group folders or shared files as these
 						// are anyway not accessible to the sync clients.

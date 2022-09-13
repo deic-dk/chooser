@@ -103,7 +103,8 @@ elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0){
 $user = \OC_User::getUser();
 if(empty($user)){
 	if(empty($_SERVER['PHP_AUTH_USER'])){
-		\OCP\Util::writeLog('cache','ERROR:  No user for webdav request '.$_SERVER['REQUEST_URI'], \OCP\Util::ERROR);
+		$headers = apache_request_headers();
+		\OCP\Util::writeLog('chooser','ERROR:  No user for webdav request '.$_SERVER['REQUEST_URI'].'. Headers: '.serialize($headers), \OCP\Util::ERROR);
 	}
 	$user = $_SERVER['PHP_AUTH_USER'];
 }
@@ -124,13 +125,15 @@ elseif($_SERVER['REQUEST_URI']==OC::$WEBROOT."/remote.php/dav" /*&&
 		$_SERVER['REQUEST_URI'] = $_SERVER['REQUEST_URI'];
 		$baseuri = OC::$WEBROOT."/remote.php/dav";
 }
-elseif(strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
-		$user."/")===0 /*&&
+elseif((rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/files/".
+		$user || strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
+		$user."/")===0) /*&&
 		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch'*/){
 		$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
 			$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
 }
-elseif(strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/sharingin/remote.php/dav/files/".
+elseif(rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/sharingin/remote.php/dav/files/".
+		$user || strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/sharingin/remote.php/dav/files/".
 		$user."/")===0){
 			$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
 		$baseuri = OC::$WEBROOT."/sharingin/remote.php/dav/files/".$user;
@@ -218,11 +221,13 @@ if($baseuri == OC::$WEBROOT."/public" || $baseuri == OC::$WEBROOT."/sharingout")
 	$objectTree->allowUpload = $authBackendShare->allowUpload;
 }
 elseif($baseuri != OC::$WEBROOT."/sharingin"){
-	//$authBackend = new OC_Connector_Sabre_Auth();
-	$authBackend = new OC_Connector_Sabre_Auth_NBF();
-	$authPlugin = new Sabre\DAV\Auth\Plugin($authBackend, $name);
-	$server->addPlugin($authPlugin);
+	$authBackendNBF = new OC_Connector_Sabre_Auth_NBF();
+	$authPluginNBF = new Sabre\DAV\Auth\Plugin($authBackendNBF, $name);
+	$server->addPlugin($authPluginNBF);
 }
+
+$authBackend = new OC_Connector_Sabre_Auth();
+$server->addPlugin(new \Sabre\DAV\Auth\Plugin($authBackend, $name));
 
 $user = \OC_User::getUser();
 if(empty($user)){
@@ -421,9 +426,11 @@ if(!empty($loggedInUser) && $loggedInUser!=$user_id){
 elseif(session_status()===PHP_SESSION_ACTIVE &&
 		// This is to avoid that the connectivity checks of the admin page
 		// flushes the session.
-		(empty($_SERVER['HTTP_REFERER']) || substr($_SERVER['HTTP_REFERER'], -25)!="/index.php/settings/admin")){
-	session_destroy();
-	$session_id = session_id();
-	unset($_COOKIE[$session_id]);
+		(empty($_SERVER['HTTP_REFERER']) || substr($_SERVER['HTTP_REFERER'], -25)!="/index.php/settings/admin") &&
+		(empty($_SERVER['HTTP_USER_AGENT']) ||
+				stripos($_SERVER['HTTP_USER_AGENT'], "ios")===false && stripos($_SERVER['HTTP_USER_AGENT'], "android")===false)){
+	//session_destroy();
+	//$session_id = session_id();
+	//unset($_COOKIE[$session_id]);
 }
 
