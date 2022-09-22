@@ -274,7 +274,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			if(!$this->mediaSearch || ($childNode instanceof \OC_Connector_Sabre_File &&
 					(substr($childNode->getContentType(), 0, 6)=="image/" ||
 							substr($childNode->getContentType(), 0, 6)=="movie/"))){
-					OC_Log::write('chooser','Adding child: '.$path.'/' . $childNode->getName().'-->'.get_class($childNode), OC_Log::WARN);
+					OC_Log::write('chooser','Adding child: '.$path.'/' . $childNode->getName().'-->'.get_class($childNode), OC_Log::INFO);
 					$nodes[$path . '/' . $childNode->getName()] = $childNode;
 			}
 			if ($childNode instanceof \Sabre\DAV\ICollection)

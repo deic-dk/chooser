@@ -226,8 +226,11 @@ elseif($baseuri != OC::$WEBROOT."/sharingin"){
 	$server->addPlugin($authPluginNBF);
 }
 
-$authBackend = new OC_Connector_Sabre_Auth();
-$server->addPlugin(new \Sabre\DAV\Auth\Plugin($authBackend, $name));
+// This is to support cookie/web auth by sync clients
+if(empty($_SERVER['PHP_AUTH_USER'])){
+	$authBackend = new OC_Connector_Sabre_Auth();
+	$server->addPlugin(new \Sabre\DAV\Auth\Plugin($authBackend, $name));
+}
 
 $user = \OC_User::getUser();
 if(empty($user)){
