@@ -72,7 +72,7 @@ try {
 	elseif(!empty($_GET['token']) && \OC_User::isLoggedIn()){
 		$user = \OCP\User::getUser();
 		$token = $_GET['token'];
-		$device_tokens = \OC_Chooser::getDeviceTokens($user);
+		$device_tokens = \OC_Chooser::getDeviceTokens($user, true);
 		$server = OCA\FilesSharding\Lib::getServerForUser($user);
 		$server = rtrim($server, "/")."/".(empty($extraRoot)?"":$extraRoot);
 		$tmpl = new OCP\Template('chooser', 'device_token', 'guest');

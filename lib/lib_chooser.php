@@ -7,6 +7,7 @@ class OC_Chooser {
 	private static $vlanlisturl = null;
 	private static $IPS_TTL_SECONDS = 30;
 	private static $IPS_CACHE_KEY = 'compute_ips';
+	private static $STORAGE_TOKEN_DEVICE_NAME = 'storage';
 	
 	public static $MAX_CERTS = 10;
 	public static $MOVING_CACHE_PREFIX = 'moving_';
@@ -119,22 +120,95 @@ class OC_Chooser {
 		return "";
 	}
 
-	public static function getEnabled() {
-		return OCP\Config::getUserValue(OCP\USER::getUser(), 'chooser', 'allow_internal_dav', 'no');
+	public static function getInternalDavEnabled() {
+		return \OCP\Config::getUserValue(OCP\USER::getUser(), 'chooser', 'allow_internal_dav', 'no');
 	}
 
+	public static function getStorageEnabled() {
+		return \OCP\Config::getUserValue(OCP\USER::getUser(), 'chooser', 'show_storage_nfs', 'no');
+	}
+	
 	/* $value: 'yes' and 'no'*/
-	public static function setEnabled($value) {
+	public static function setInternalDavEnabled($value) {
 		if($value != 'yes' && $value != 'no'){
 			throw new \Exception("Must be yes or no: $value");
 		}
-		return OCP\Config::setUserValue(OCP\USER::getUser(), 'chooser', 'allow_internal_dav', $value);
+		return \OCP\Config::setUserValue(\OCP\USER::getUser(), 'chooser', 'allow_internal_dav', $value);
+	}
+
+	// Copied from files_external
+	private static function encryptPassword($password) {
+		$cipher = self::getCipher();
+		$iv = \OCP\Util::generateRandomBytes(16);
+		$cipher->setIV($iv);
+		return base64_encode($iv . $cipher->encrypt($password));
+	}
+
+	/* $value: 'yes' and 'no'*/
+	public static function setStorageEnabled($value) {
+		if($value!='yes' && $value!='no'){
+			throw new \Exception("Must be yes or no: $value");
+		}
+		$user = \OCP\USER::getUser();
+		\OCP\Config::setUserValue($user, 'chooser', 'show_storage_nfs', $value);
+		if($value=='no'){
+			// Just leave it
+			//self::deleteDeviceToken($user,  self::$STORAGE_TOKEN_DEVICE_NAME);
+			return true;
+		}
+		$res = true;
+		if(!empty(self::getDeviceToken($user, self::$STORAGE_TOKEN_DEVICE_NAME))){
+			return $res;
+		}
+		// else
+		$dataDir = \OC_Config::getValue("datadirectory", \OC::$SERVERROOT . "/data");
+		$userDataDir = rtrim($dataDir, '/').'/'.$user;
+		$userStorageMountFile = rtrim($userDataDir, '/').'/'.$user.'/mount.json';
+		$storageDir = \OC_Config::getValue("storagedirectory", \OC::$STORAGEROOT . "/storage");
+		$userStorageDir = rtrim($storageDir, '/').'/'.$user;
+		if(!file_exists($userStorageDir)){
+			$res = $res && mkdir($userStorageDir);
+		}
+		$userServer = \OCA\FilesSharding\Lib::getServerForUser($user);
+		if(empty($userServer)){
+			$userServer = OCA\FilesSharding\Lib::getMasterURL();
+		}
+		$storageUrl = $userServer."storage/";
+		$storageUrlEscaped = str_replace("/", "\/", $storageUrl);
+		$storageToken = ''.md5(uniqid(mt_rand(), true));
+		$storageTokenEncrypted = encryptPassword($storageToken);
+		self::setDeviceToken($user, self::$STORAGE_TOKEN_DEVICE_NAME, $storageToken);
+$storageMountJson = <<<END
+{
+    "user": {
+        "$user": {
+            "\/$user\/files_external\/storage": {
+                "class": "\\OC\\Files\\Storage\\DAV",
+                "options": {
+                    "host": "$storageUrlEscaped",
+                    "user": "$user",
+                    "password": "",
+                    "root": "\/",
+                    "secure": "true",
+                    "password_encrypted": "$storageTokenEncrypted"
+                },
+                "priority": 100
+            }
+        }
+    }
+}
+END;
+		
+		if(!file_exists($userStorageMountFile)){
+			$res = $res && file_put_contents($userStorageMountFile, $storageMountJson);
+		}
+		return $res;
 	}
 
 	public static function getCertIndex($user) {
 		$index = 0;
 		while($index<self::$MAX_CERTS){
-			$subject = OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
+			$subject = \OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
 			if(empty($subject)){
 				return $index;
 			}
@@ -144,7 +218,7 @@ class OC_Chooser {
 	}
 
 	public static function getCertSubject($user, $index=0){
-		return OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
+		return \OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
 	}
 
 	public static function addCert($user, $subject) {
@@ -152,7 +226,7 @@ class OC_Chooser {
 		if($index<0){
 			return false;
 		}
-		return OCP\Config::setUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index, $subject);
+		return \OCP\Config::setUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index, $subject);
 	}
 
 	public static function removeCert($user, $subject) {
@@ -194,10 +268,16 @@ class OC_Chooser {
 		return $ret;
 	}
 	
-	public static function getDeviceTokens($user){
+	public static function getDeviceTokens($user, $hideStorageToken=false){
 		$result = array();
-		$sql = "SELECT configkey, configvalue FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey LIKE ?";
-		$args = array($user, 'chooser', 'device_token_%');
+		if($hideStorageToken){
+			$sql = "SELECT configkey, configvalue FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey LIKE ? AND configkey != ?";
+			$args = array($user, 'chooser', 'device_token_%', 'device_token_'.self::$STORAGE_TOKEN_DEVICE_NAME);
+		}
+		else{
+			$sql = "SELECT configkey, configvalue FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey LIKE ?";
+			$args = array($user, 'chooser', 'device_token_%');
+		}
 		$query = \OCP\DB::prepare($sql);
 		$output = $query->execute($args);
 		while($row=$output->fetchRow()){
@@ -209,11 +289,18 @@ class OC_Chooser {
 	}
 	
 	public static function setDeviceToken($user, $deviceName, $token){
+		if($deviceName==self::$STORAGE_TOKEN_DEVICE_NAME){
+			$deviceName = $deviceName.'_device';
+		}
 		$forcePortable = (CRYPT_BLOWFISH != 1);
 		$hasher = new \PasswordHash(8, $forcePortable);
 		$hash = $hasher->HashPassword($token . \OC_Config::getValue('passwordsalt', ''));
 		\OCP\Config::setUserValue($user, 'chooser', 'device_token_'.$deviceName, $hash);
 		return $token;
+	}
+	
+	public static function deleteDeviceToken($user, $deviceName){
+		\OC_Preferences::deleteKey($user, 'chooser', 'device_token_'.$deviceName);
 	}
 	
 	public static function setToken($user, $id, $token){

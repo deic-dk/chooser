@@ -8,6 +8,8 @@ $user_id = OCP\USER::getUser();
 
 OC_Log::write('files_sharding',"Setting DN: ".$user_id.":".$dn, OC_Log::WARN);
 
+$ret = [];
+
 $ret['msg'] = "";
 
 if($dn===""){

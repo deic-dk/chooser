@@ -10,6 +10,33 @@ function toggleDav() {
 	xhr.send();
 }
 
+function toggleNfs(){
+	$.ajax(OC.linkTo('chooser','ajax/toggle_nfs.php'), {
+		 type:'GET',
+		  data:{
+		 },
+		 dataType:'json',
+		 success: function(s){
+			if(s==null){
+				OC.msg.finishedSaving('#chooser_msg', {status: 'error', data: {}});
+			}
+			 else if(s.error){
+				OC.msg.finishedSaving('#chooser_msg', {status: 'error', data: {message: s.error}});
+			}
+			else{
+				$('#chooser_msg').show();
+				$('#chooser_msg').removeClass('error');
+				OC.msg.finishedSaving('#chooser_msg', {status: 'success', data: {message: s.message}});
+			}
+		},
+		error:function(s){
+			$('#chooser_msg').removeClass('success');
+			OC.msg.finishedSaving('#chooser_msg', {status: 'error', data: {message: "Unexpected error"}});
+		}
+	});
+}
+
+
 function saveSubject(){
 	var dn = $('input#ssl_cert_dn').val();
 	if(typeof dn === 'undefined'){
@@ -41,13 +68,16 @@ function saveSubject(){
 }
 
 $(document).ready(function(){
-  $('#allow_internal_dav').click(function(){
-  	toggleDav();
-    //alert( $(this).attr("id") );
-  });
-  
-  $('#chooser_settings_submit').click(function(ev){
-  	saveSubject();
-  });
-  
+	$('#allow_internal_dav').click(function(){
+		toggleDav();
+	});
+
+	$('#show_storage_nfs').click(function(){
+		toggleNfs();
+	});
+
+	$('#chooser_settings_submit').click(function(ev){
+		saveSubject();
+	});
+
 });

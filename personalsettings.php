@@ -9,7 +9,8 @@ OCP\Util::addscript('chooser', 'personalsettings');
 
 $tmpl = new OCP\Template( 'chooser', 'personalsettings');
 
-$tmpl->assign('is_enabled', OC_Chooser::getEnabled());
+$tmpl->assign('dav_enabled', OC_Chooser::getInternalDavEnabled());
+$tmpl->assign('storage_enabled', OC_Chooser::getStorageEnabled());
 $tmpl->assign('ssl_cert_dn', OC_Chooser::getCertSubject(OCP\USER::getUser()));
 
 return $tmpl->fetchPage();
