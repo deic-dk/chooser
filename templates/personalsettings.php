@@ -13,10 +13,10 @@ $l = OC_L10N::get('chooser');
 
 	<br />
 
-	<?php p($l->t('Browse /storage in web interface')); ?>
+	<?php if(OC_App::isEnabled('files_external')){ p($l->t('Browse /storage in web interface')); ?>
 	<input type="checkbox" id="show_storage_nfs" value="0"
 		   title="<?php p($l->t( 'Show the persistent storage for your pods/containers' )); ?>"
-		   <?php if ($_['storage_enabled'] == 'yes'): ?> checked="checked"<?php endif; ?> />
+		   <?php if ($_['storage_enabled'] == 'yes'): ?> checked="checked"<?php endif; }?> />
 
 	<br />
 

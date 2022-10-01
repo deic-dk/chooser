@@ -144,6 +144,15 @@ class OC_Chooser {
 		return base64_encode($iv . $cipher->encrypt($password));
 	}
 
+	private static function getCipher() {
+		if (!class_exists('Crypt_AES', false)) {
+			include('Crypt/AES.php');
+		}
+		$cipher = new Crypt_AES(CRYPT_AES_MODE_CBC);
+		$cipher->setKey(\OCP\Config::getSystemValue('passwordsalt'));
+		return $cipher;
+	}
+
 	/* $value: 'yes' and 'no'*/
 	public static function setStorageEnabled($value) {
 		if($value!='yes' && $value!='no'){
@@ -156,16 +165,18 @@ class OC_Chooser {
 			//self::deleteDeviceToken($user,  self::$STORAGE_TOKEN_DEVICE_NAME);
 			return true;
 		}
+		// else
 		$res = true;
 		if(!empty(self::getDeviceToken($user, self::$STORAGE_TOKEN_DEVICE_NAME))){
-			return $res;
+			self::deleteDeviceToken($user, self::$STORAGE_TOKEN_DEVICE_NAME);
 		}
-		// else
 		$dataDir = \OC_Config::getValue("datadirectory", \OC::$SERVERROOT . "/data");
 		$userDataDir = rtrim($dataDir, '/').'/'.$user;
-		$userStorageMountFile = rtrim($userDataDir, '/').'/'.$user.'/mount.json';
-		$storageDir = \OC_Config::getValue("storagedirectory", \OC::$STORAGEROOT . "/storage");
+		$userStorageMountFile = rtrim($userDataDir, '/').'/mount.json';
+		$storageDir = \OC_Config::getValue("storagedirectory", \OC::$SERVERROOT . "/storage");
 		$userStorageDir = rtrim($storageDir, '/').'/'.$user;
+		
+		OC_Log::write('chooser', 'Setting up '.$user. ' for NFS: '.$userStorageDir, OC_Log::WARN);
 		if(!file_exists($userStorageDir)){
 			$res = $res && mkdir($userStorageDir);
 		}
@@ -173,17 +184,19 @@ class OC_Chooser {
 		if(empty($userServer)){
 			$userServer = OCA\FilesSharding\Lib::getMasterURL();
 		}
-		$storageUrl = $userServer."storage/";
+		$storageUrl = $userServer."/storage/";
+		OC_Log::write('chooser', 'Setting storage URL: . '.$storageUrl, OC_Log::WARN);
 		$storageUrlEscaped = str_replace("/", "\/", $storageUrl);
 		$storageToken = ''.md5(uniqid(mt_rand(), true));
-		$storageTokenEncrypted = encryptPassword($storageToken);
+		$storageTokenEncrypted = self::encryptPassword($storageToken);
+		OC_Log::write('chooser', 'Setting device token for '.self::$STORAGE_TOKEN_DEVICE_NAME.':'.$storageToken, OC_Log::WARN);
 		self::setDeviceToken($user, self::$STORAGE_TOKEN_DEVICE_NAME, $storageToken);
 $storageMountJson = <<<END
 {
     "user": {
         "$user": {
             "\/$user\/files_external\/storage": {
-                "class": "\\OC\\Files\\Storage\\DAV",
+                "class": "\\\\OC\\\\Files\\\\Storage\\\\DAV",
                 "options": {
                     "host": "$storageUrlEscaped",
                     "user": "$user",
@@ -199,9 +212,8 @@ $storageMountJson = <<<END
 }
 END;
 		
-		if(!file_exists($userStorageMountFile)){
-			$res = $res && file_put_contents($userStorageMountFile, $storageMountJson);
-		}
+		OC_Log::write('chooser', 'Writing JSON to: '.$userStorageMountFile, OC_Log::WARN);
+		$res = $res && file_put_contents($userStorageMountFile, $storageMountJson);
 		return $res;
 	}
 
