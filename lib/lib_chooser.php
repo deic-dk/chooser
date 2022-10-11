@@ -173,13 +173,6 @@ class OC_Chooser {
 		$dataDir = \OC_Config::getValue("datadirectory", \OC::$SERVERROOT . "/data");
 		$userDataDir = rtrim($dataDir, '/').'/'.$user;
 		$userStorageMountFile = rtrim($userDataDir, '/').'/mount.json';
-		$storageDir = \OC_Config::getValue("storagedirectory", \OC::$SERVERROOT . "/storage");
-		$userStorageDir = rtrim($storageDir, '/').'/'.$user;
-		
-		OC_Log::write('chooser', 'Setting up '.$user. ' for NFS: '.$userStorageDir, OC_Log::WARN);
-		if(!file_exists($userStorageDir)){
-			$res = $res && mkdir($userStorageDir);
-		}
 		$userServer = \OCA\FilesSharding\Lib::getServerForUser($user);
 		if(empty($userServer)){
 			$userServer = OCA\FilesSharding\Lib::getMasterURL();
