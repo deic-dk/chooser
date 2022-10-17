@@ -29,3 +29,16 @@ else{
 
 \OC_User::useBackend('database');
 require_once('apps/chooser/appinfo/apache_note_user.php');
+
+//if(\OC_Chooser::getStorageEnabled()=='yes'){ /*Doesn't work. No user yet...*/
+	\OCP\App::addNavigationEntry(
+		array(
+			'appname' => 'files_external',
+			'id' => 'storage',
+			'order' => 3,
+			'href' => OC::$WEBROOT."/index.php/apps/files?dir=%2F&storage=true",
+			'name' => 'Storage'
+		)
+	);
+//}
+

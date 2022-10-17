@@ -121,11 +121,11 @@ class OC_Chooser {
 	}
 
 	public static function getInternalDavEnabled() {
-		return \OCP\Config::getUserValue(OCP\USER::getUser(), 'chooser', 'allow_internal_dav', 'no');
+		return \OCP\Config::getUserValue(\OCP\USER::getUser(), 'chooser', 'allow_internal_dav', 'no');
 	}
 
 	public static function getStorageEnabled() {
-		return \OCP\Config::getUserValue(OCP\USER::getUser(), 'chooser', 'show_storage_nfs', 'no');
+		return \OCP\Config::getUserValue(\OCP\USER::getUser(), 'chooser', 'show_storage_nfs', 'no');
 	}
 	
 	/* $value: 'yes' and 'no'*/
