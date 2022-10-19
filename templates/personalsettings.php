@@ -4,7 +4,7 @@ $l = OC_L10N::get('chooser');
 ?>
 
 <fieldset class="section">
-	<h2><?php p($l->t('Data processing access control')); ?></h2>
+	<h2><?php p($l->t('Data processing')); ?></h2>
 	
 	<?php p($l->t('Allow HTTP access from your own pods')); ?>
 	<input type="checkbox" id="allow_internal_dav" value="0"

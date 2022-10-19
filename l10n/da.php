@@ -1,7 +1,7 @@
 <?php
 $TRANSLATIONS = array(
 		"Save" => "Gem",
-		"Data processing access control" => "Adgangskontrol for databehandling",
+		"Data processing" => "Data-processering",
 		"Allow HTTP access from your own pods" => "Tillad HTTP-adgang fra egne pods",
 		"Needed for unauthenticated file access from your pods/containers" => "Nødvendig for at dine pods/containere kan tilgå dine data uden brug af password",
 		"Browse /storage in web interface" => "Browse /storage i web-interfacet",
