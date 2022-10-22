@@ -137,6 +137,7 @@ elseif(rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/sharingin/remote.ph
 		$user."/")===0){
 			$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
 		$baseuri = OC::$WEBROOT."/sharingin/remote.php/dav/files/".$user;
+		$objectTree->sharingIn = true;
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/remote.php/webdav")===0){
 	$baseuri = OC::$WEBROOT."/sharingin/remote.php/webdav";
