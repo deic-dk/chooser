@@ -73,22 +73,99 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 	}
 	
 	private $mediaSearch = false;
+	private $searchDepth = "";
 	// This is only for the media search called by the iPhone app.
 	protected function httpSearch($uri) {
 		$this->mediaSearch = true;
 		$xml = $this->httpRequest->getBody(true);
+		
+		$xml = str_replace('<d:searchrequest', '<d:propfind', $xml);
+		$xml = str_replace('</d:searchrequest', '</d:propfind', $xml);
+		$xml = str_replace('<d:basicsearch>', '', $xml);
+		$xml = str_replace('</d:basicsearch>', '', $xml);
+		$xml = str_replace('<d:select>', '', $xml);
+		$xml = str_replace('</d:select>', '', $xml);
+		$this->httpRequest->setBody($xml);
 		OC_Log::write('chooser','Media search XML: '.$xml, OC_Log::WARN);
 		$xml = preg_replace('/&(?!#?[a-z0-9]+;)/', '&amp;', $xml);
 		$parsed = simplexml_load_string($xml);
 		$parsed = dom_import_simplexml($parsed);
-		$path = $parsed->getElementsByTagName('from')->
-			item(0)->getElementsByTagName('scope')->
-			item(0)->getElementsByTagName('href')->item(0)->nodeValue;
+		$parsed->preserveWhiteSpace = false;
+		
+		$scope = $parsed->getElementsByTagName('from')->item(0)->getElementsByTagName('scope')->item(0);
+		$path = $scope->getElementsByTagName('href')->item(0)->nodeValue;
+		$this->searchDepth = $scope->getElementsByTagName('depth')->item(0)->nodeValue;
 		$user = \OCP\USER::getUser();
 		$path = preg_replace('|/files/'.$user.'|', '', $path);
 		OC_Log::write('chooser','Search path: '.$path, OC_Log::WARN);
+		
+		$orderby = $parsed->getElementsByTagName('orderby')->item(0)->getElementsByTagName('order');
+		if(!empty($orderby)){
+			foreach($orderby as $order){
+				foreach($order->getElementsByTagName('prop') as $p){
+					foreach($p->childNodes as $node){
+						if($node->nodeName!='#text' && !empty($node->nodeName)){
+							//{DAV:}lastModified
+							$prop = '{'.$node->namespaceURI.'}'.preg_replace('|^[^:]+:|', '', $node->nodeName);
+							break;
+						}
+					}
+				}
+				$direction = $order->getElementsByTagName('ascending')->length==1?'ascending':'descending';
+				$this->orderBy[] = ['prop'=>$prop, 'direction'=>$direction];
+				OC_Log::write('chooser','ORDERBY: '.$prop.':'.$direction, OC_Log::WARN);
+			}
+		}
+		
+		$limit = '';
+		$limits = $parsed->getElementsByTagName('limit');
+		if($limits->length>0){
+			$limit = $limits->item(0)->getElementsByTagName('nresults')->item(0)->nodeValue;
+		}
+		OC_Log::write('chooser', 'Search limit: '.$limit, OC_Log::WARN);
+		if(!empty($limit)){
+			$this->limit = $limit;
+		}
+		
+		$where = $this->parseWhere($parsed->getElementsByTagName('where')->item(0));
+		OC_Log::write('chooser', 'Search conditions: '.$where, OC_Log::WARN);
+		if(!empty($where)){
+			$this->where = $where;
+		}
+		
 		if($this->mediaSearch){
 			$this->httpPropfind($path);
+		}
+	}
+	
+	private function parseWhere($where){
+		$name = preg_replace('/^[^:]+:/', '', $where->nodeName);		
+		if($name=='and' || $name=='or'){
+			$arr = [];
+			foreach($where->childNodes as $node){
+				$el = $this->parseWhere($node);
+				if(!empty($el)){
+					$arr[] = $el;
+				}
+			}
+			return '( ' . join(' '.$name.' ', $arr). ' )';
+		}
+		elseif($name=='like' || $name=='lt'|| $name=='gt'){
+			foreach($where->getElementsByTagName('prop')->item(0)->childNodes as $node){
+				if($node->nodeName!='#text' && !empty($node->nodeName)){
+					$prop = '{'.$node->namespaceURI.'}'.preg_replace('|^[^:]+:|', '', $node->nodeName);
+					break;
+				}
+			}
+			$literal = $where->getElementsByTagName('literal')->item(0)->nodeValue;
+			return $prop.' '.$name.' '.$literal;
+		}
+		else{
+			foreach($where->childNodes as $node){
+				if($node->nodeName!='#text' && !empty($node->nodeName)){
+					return $this->parseWhere($node);
+				}
+			}
 		}
 	}
 	
@@ -177,16 +254,70 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		return parent::httpOptions($uri);
 	}
 	
+	// Array like [['prop'=>'{DAV:}getlastmodified', 'direction'=>'ascending'], ['prop'=>'{DAV:}displayname', 'direction'=>'ascending'], ...]
+	private $orderBy = [];
+	/**
+	 * Ccompare an two property lists
+	 * @param string $properties1
+	 * @param string $properties2
+	 * @param string $orderBy
+	 * @param string $order
+	 * @return -1 if 1 is smaller than 2, 1 if larger, 0 if equal
+	 */
+	private function cmp($properties1, $properties2, $prop, $direction){
+		if($prop=='{DAV:}getlastmodified'){
+			//$time1 = strtotime($properties1[200][$prop]);
+			$time1 = $properties1[200][$prop]->getTime();
+			$prop1 = date('Y-m-d', $time1->getTimeStamp());
+			//$time2 = strtotime($properties2[200][$prop]);
+			$time2 = $properties2[200][$prop]->getTime();
+			$prop2 = date('Y-m-d', $time2->getTimeStamp());
+			OC_Log::write('chooser','Compare: '.$time1->getTimeStamp().'-->'.serialize($properties1[200][$prop]), OC_Log::DEBUG);
+		}
+		else{
+			$prop1 = $properties1[200][$prop];
+			$prop2 = $properties2[200][$prop];
+		}
+		OC_Log::write('chooser','Comparing: '.$prop1.'-->'.$prop2, OC_Log::INFO);
+		if($prop1==$prop2){
+			return 0;
+		}
+		elseif($direction=='ascending' && $prop1<$prop2 || $direction=='descending' && $prop1>$prop2){
+			return -1;
+		}
+		elseif($direction=='ascending' && $prop1>$prop2 || $direction=='descending' && $prop1<$prop2){
+			return 1;
+		}
+		return 0;
+	}
+
+	private function cmps($a, $b){
+		if(!empty($this->orderBy)){
+			foreach($this->orderBy as $ob){
+				$cmpRes = $this->cmp($a, $b, $ob['prop'], $ob['direction']);
+				if($cmpRes!=0){
+					return $cmpRes;
+				}
+			}
+		}
+		return 0;
+	}
+	
+	private $limit = 0;
+	private $where;
+	
 	/**
 	 * @see \Sabre\DAV\Server
 	 */
 	protected function httpPropfind($uri) {
 		// $xml = new \Sabre\DAV\XMLReader(file_get_contents('php://input'));
 		$xml = $this->httpRequest->getBody(true);
-		OC_Log::write('chooser','PROPFIND XML: '.$xml, OC_Log::DEBUG);
+		if(!empty($xml)){
+			OC_Log::write('chooser','PROPFIND XML: '.$xml, OC_Log::INFO);
+		}
 		$requestedProperties = $this->parsePropFindRequest($xml);
 
-		$depth = $this->favoriteSearch?1:$this->getHTTPDepth(1);
+		$depth = empty($this->searchDepth)?($this->favoriteSearch?1:$this->getHTTPDepth(1)):$this->searchDepth;
 		// The only two options for the depth of a propfind is 0 or 1
 		// if ($depth!=0) $depth = 1;
 		
@@ -202,6 +333,14 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		//$newProperties['href'] = preg_replace('/^(\/*remote.php\/)mydav\//', '$1/wdav/', trim($myPath,'/'));
 		
 		$newProperties = $this->getPropertiesForPath($uri, $requestedProperties, $depth);
+		
+		if(!empty($this->orderBy)){
+			usort($newProperties, array( $this, 'cmps'));
+		}
+		
+		if(!empty($this->limit)){
+			$newProperties = array_slice($newProperties, 0, (int)$this->limit);
+		}
 
 		// This is a multi-status response
 		$this->httpResponse->sendStatus(207);
@@ -273,7 +412,9 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			}
 			if(!$this->mediaSearch || ($childNode instanceof \OC_Connector_Sabre_File &&
 					(substr($childNode->getContentType(), 0, 6)=="image/" ||
-							substr($childNode->getContentType(), 0, 6)=="movie/"))){
+							substr($childNode->getContentType(), 0, 6)=="movie/" ||
+							substr($childNode->getContentType(), 0, 6)=="video/"
+							))){
 					OC_Log::write('chooser','Adding child: '.$path.'/' . $childNode->getName().'-->'.get_class($childNode), OC_Log::INFO);
 					$nodes[$path . '/' . $childNode->getName()] = $childNode;
 			}
@@ -376,7 +517,8 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				}
 				if($this->mediaSearch && (!$childNode instanceof \OC_Connector_Sabre_File ||
 					(substr($childNode->getContentType(), 0, 6)!="image/" &&
-					substr($childNode->getContentType(), 0, 6)!="movie/"))){
+							substr($childNode->getContentType(), 0, 6)!="movie/" &&
+							substr($childNode->getContentType(), 0, 6)!="video/"))){
 					continue;
 				}
 				$nodes[$path . '/' . $childNode->getName()] = $childNode;
@@ -394,7 +536,8 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		// We shouldn't actually return everything we know though, and only return a
 		// sensible list.
 		$allProperties = count($propertyNames)==0;
-
+		OC_Log::write('chooser','REQUESTED PROPERTIES: '.serialize($propertyNames), OC_Log::INFO);
+		
 		foreach($nodes as $myPath=>$node) {
 
 			$currentPropertyNames = $propertyNames;
@@ -431,14 +574,19 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				$node instanceof \OC_Connector_Sabre_Favorites_Directory){
 				$result = true;
 			}
-			elseif($node instanceof \OC_Connector_Sabre_Sharingin_Directory){
+			// infuse support: infuse cannot parse XML with OC properties.
+			// Unfortunately infuse does not provide a user agent,
+			// so we can only try to recognize it by user-Agent not being set...
+			elseif($node instanceof \OC_Connector_Sabre_Sharingin_Directory &&
+					!(empty($_SERVER['HTTP_USER_AGENT']) && !$allProperties)){
 				// beforeGetProperties() calls $node->getFileId() and $node->getDavPermissions()
 				// which we override in sharingin_directory.php
 				$result = $this->broadcastEvent('beforeGetProperties',array($myPath, $node, &$currentPropertyNames, &$newProperties));
 			}
-			else{
+			elseif(!(empty($_SERVER['HTTP_USER_AGENT']) && !$allProperties)){
 				$result = $this->broadcastEvent('beforeGetProperties',array($myPath, $node, &$currentPropertyNames, &$newProperties));
 			}
+			
 			// If this method explicitly returned false, we must ignore this
 			// node as it is inaccessible.
 			if ($result===false) continue;
@@ -472,9 +620,14 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				}
 				switch($prop) {
 					case '{DAV:}getlastmodified':
-						if ($node->getLastModified()){
+						if($node instanceof \Sabre\DAV\IFile && !empty($node->getLastModified())){
 							$newProperties[200][$prop] =
 							new \Sabre\DAV\Property\GetLastModified($node->getLastModified());
+						}
+						break;
+					case '{DAV:}displayname':
+						if (!empty($myPath)){
+							$newProperties[200][$prop] = $myPath=='/'?'/':basename($myPath);
 						}
 						break;
 					case '{DAV:}getcontentlength':
@@ -522,13 +675,22 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 						break;
 					case '{' . self::NS_NEXTCLOUD . '}has-preview':
 						if($node instanceof \Sabre\DAV\IFile){
-							OC_Log::write('chooser','PROP: '.$myPath.'-->'.$prop.'-->'.get_class($node), OC_Log::WARN);
 							if($node->getContentType()=="application/pdf" ||
-									substr($node->getContentType(), 0, 6)=="image/" || substr($node->getContentType(), 0, 5)=="text/"){
-								$newProperties[200][$prop] = 'true';
+									substr($node->getContentType(), 0, 6)=="image/" ||
+									substr($node->getContentType(), 0, 6)=="movie/" ||
+									substr($node->getContentType(), 0, 6)=="video/" ||
+									substr($node->getContentType(), 0, 5)=="text/"){
+								$newProperties[200][$prop] = true;
 							}
+							OC_Log::write('chooser','PROP: '.$myPath.'-->'.$prop.'-->'.get_class($node).
+									'-->'.$node->getContentType().'-->'.$newProperties[200][$prop], OC_Log::INFO);
 						}
 						else{
+						}
+						break;
+					case '{' . self::NS_NEXTCLOUD . '}creation_time':
+						if ($node->getLastModified()){
+							$newProperties[200][$prop] = $node->getLastModified();
 						}
 						break;
 						//case '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite' :
@@ -579,31 +741,77 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			}
 			
 			if($this->mediaSearch){
-				$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid'] =
-				\OCA\FilesSharding\Lib::getFileId($path);
-				$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}size'] =
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
+				$newProperties[200][$manualProp] = \OCA\FilesSharding\Lib::getFileId($path);
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}size';
+				$newProperties[200][$manualProp] =
 					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
-				$newProperties[200]['{DAV:}getcontentlength'] =
-					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite'] = '0';
-				$newProperties[200]['{' . self::NS_NEXTCLOUD . '}is-encrypted'] = '0';
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{DAV:}getcontentlength';
+				$newProperties[200][$manualProp] =
+					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite';
+				$newProperties[200][$manualProp] = '0';
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}is-encrypted';
+				$newProperties[200][$manualProp] = '0';
+				unset($newProperties[404][$manualProp]);
+				//manualProp = '{' . self::NS_NEXTCLOUD . '}has-preview';
+				//$newProperties[200][manualProp] = '0';
+				if(!empty($this->where)){
+					$whereExp = $this->where;
+					foreach(array_keys($newProperties[200]) as $prop){
+						$val = $newProperties[200][$prop];
+						if($prop=='{DAV:}getlastmodified'){
+							$time = $val->getTime();
+							$time->setTimeZone(new DateTimeZone('Europe/Copenhagen'));
+							$val = $time->format('Y-m-d').'T'.$time->format('H:i:sP');
+						}
+						$whereExp = str_replace($prop, $val, $whereExp);
+					}
+					$whereExp = preg_replace('| ([^ ]+) like ([^ ]+)/% |', ' $1 like $2/.* ', $whereExp);
+					$whereExp = preg_replace('| ([^ ]+) like ([^ ]+) |', ' preg_match("|$2|", "$1") ', $whereExp);
+					$whereExp = preg_replace('| ([^ ]+) lt ([^ ]+) |', ' "$1" < "$2" ', $whereExp);
+					$whereExp = preg_replace('| ([^ ]+) gt ([^ ]+) |', ' "$1" > "$2" ', $whereExp);
+					$whereExp = '$res = ' . $whereExp . '; return $res;';
+					$res = eval($whereExp);
+					OC_Log::write('chooser','Where expression eval res: '.$whereExp.'-->'.$res, OC_Log::INFO);
+					if(!$res){
+						continue;
+					}
+				}
+
 			}
 			
 			elseif($this->favoriteSearch){
-				$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}size'] =
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}size';
+				$newProperties[200][$manualProp] =
 					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
-				$newProperties[200]['{DAV:}getcontentlength'] =
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{DAV:}getcontentlength';
+				$newProperties[200][$manualProp] =
 					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite'] = '0';
-				$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite'] = '1';
-				$newProperties[200]['{' . self::NS_NEXTCLOUD . '}is-encrypted'] = '0';
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite';
+				$newProperties[200][$manualProp] = '1';
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}is-encrypted';
+				$newProperties[200][$manualProp] = '0';
+				unset($newProperties[404][$manualProp]);
 				if($node instanceof OC_Connector_Sabre_Favorite_Directory){
-					$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid'] =
-						$node->getOcFileId();
+					$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
+					$newProperties[200][$manualProp] = $node->getOcFileId();
+					unset($newProperties[404][$manualProp]);
 				}
 			}
 
 			// If the resourcetype property was manually added to the requested property list,
 			// we will remove it again.
-			if ($removeRT) unset($newProperties[200]['{DAV:}resourcetype']);
+			if($removeRT){
+				unset($newProperties[200]['{DAV:}resourcetype']);
+			}
 
 			$returnPropertyList[] = $newProperties;
 
