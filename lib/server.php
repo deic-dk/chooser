@@ -620,7 +620,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				}
 				switch($prop) {
 					case '{DAV:}getlastmodified':
-						if($node instanceof \Sabre\DAV\IFile && !empty($node->getLastModified())){
+						if (!empty($node->getLastModified())){
 							$newProperties[200][$prop] =
 							new \Sabre\DAV\Property\GetLastModified($node->getLastModified());
 						}
