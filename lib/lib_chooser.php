@@ -4,10 +4,9 @@ class OC_Chooser {
 
 	private static $uservlannets = null;
 	private static $trustednets = null;
-	private static $vlanlisturl = null;
-	private static $IPS_TTL_SECONDS = 30;
-	private static $IPS_CACHE_KEY = 'compute_ips';
+	private static $IPS_TTL_SECONDS = 3600;
 	private static $STORAGE_TOKEN_DEVICE_NAME = 'storage';
+	private static $vlan_get_podip_owner_url = 'kube.sciencedata.dk/get_podip_owner?ip=';
 	
 	public static $MAX_CERTS = 10;
 	public static $MOVING_CACHE_PREFIX = 'moving_';
@@ -30,9 +29,6 @@ class OC_Chooser {
 			if(count(self::$uservlannets)==1 && substr(self::$uservlannets[0], 0, 10)==='USER_VLAN_'){
 				self::$uservlannets = [];
 			}
-		}
-		if(self::$vlanlisturl===null){
-			self::$vlanlisturl = trim(\OCP\Config::getSystemValue('vlanlisturl', ''));
 		}
 	}
 	
@@ -60,12 +56,15 @@ class OC_Chooser {
 		if(isset($_SERVER['REMOTE_ADDR']) && self::checkUserVlan($_SERVER['REMOTE_ADDR'])){
 			$user_id = '';
 			$list_array = [];
-			if(!empty(self::$vlanlisturl) && ($list_array = apc_fetch(self::$IPS_CACHE_KEY)) === false){
-				$list_line = file_get_contents(self::$vlanlisturl);
-				$list_array = explode("\n", $list_line);
-				apc_add(self::$IPS_CACHE_KEY, $list_array, self::$IPS_TTL_SECONDS);
-				OC_Log::write('chooser', 'Refreshed IP cache: '.$list_array[0], OC_Log::INFO);
+			$apc_cache_key = 'check_vlan_'.$_SERVER['REMOTE_ADDR'];
+			if(($list_array = apc_fetch($apc_cache_key)) === false){
+				$user_id = file_get_contents(self::$vlan_get_podip_owner_url . $_SERVER['REMOTE_ADDR']);
+				apc_add($apc_cache_key, $user_id, self::$IPS_TTL_SECONDS);
+				OC_Log::write('chooser', 'cached IP: ' . $_SERVER['REMOTE_ADDR'] . ' owned by ' . $user_id, OC_Log::INFO);
 			}
+			// this should implement the case of a request from a pod, but not also a request from localhost...
+			// to be continued
+			////// REPLACE BELOW
 			foreach($list_array as $line){
 				$entries = explode("|", $line);
 				if(count($entries)<2){
@@ -92,6 +91,7 @@ class OC_Chooser {
 					break;
 				}
 			}
+			////// REPLACE ABOVE
 			OC_Log::write('chooser', 'user_id: '.$user_id, OC_Log::DEBUG);
 			return $user_id;
 		}
