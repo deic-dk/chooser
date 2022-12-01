@@ -6,7 +6,7 @@ class OC_Chooser {
 	private static $trustednets = null;
 	private static $IPS_TTL_SECONDS = 3600;
 	private static $STORAGE_TOKEN_DEVICE_NAME = 'storage';
-	private static $vlan_get_podip_owner_url = 'kube.sciencedata.dk/get_podip_owner?ip=';
+	private static $vlan_get_podip_owner_url = 'http://kube.sciencedata.dk/get_podip_owner?ip=';
 	
 	public static $MAX_CERTS = 10;
 	public static $MOVING_CACHE_PREFIX = 'moving_';
@@ -55,44 +55,28 @@ class OC_Chooser {
 	public static function checkIP(){
 		if(isset($_SERVER['REMOTE_ADDR']) && self::checkUserVlan($_SERVER['REMOTE_ADDR'])){
 			$user_id = '';
-			$list_array = [];
-			$apc_cache_key = 'check_vlan_'.$_SERVER['REMOTE_ADDR'];
-			if(($list_array = apc_fetch($apc_cache_key)) === false){
-				$user_id = file_get_contents(self::$vlan_get_podip_owner_url . $_SERVER['REMOTE_ADDR']);
+			$requested_pod_ip = '';
+			// For a request from localhost (Apache) to verify /storage, $_SERVER['REMOTE_ADDR']=="localhost", and
+			//   and $_SERVER['HTTP_IP'] is the pod IP
+			if(($_SERVER['REMOTE_ADDR']=="localhost" || $_SERVER['REMOTE_ADDR']=="127.0.0.1") && !empty($_SERVER['HTTP_IP'])) {
+				$requested_pod_ip = $_SERVER['HTTP_IP'];
+			// For a request from a user pod, $_SERVER['REMOTE_ADDR'] will be the pod IP
+			} else {
+				$requested_pod_ip = $_SERVER['REMOTE_ADDR'];
+			}
+			$apc_cache_key = 'check_vlan_' . $requested_pod_ip;
+			// Try to fetch the user_id for this IP address from the cache
+			if (($user_id = apc_fetch($apc_cache_key)) === false) {
+				// If it's not cached, ask the backend and cache the result
+				$user_id = file_get_contents(self::$vlan_get_podip_owner_url . $requested_pod_ip);
 				apc_add($apc_cache_key, $user_id, self::$IPS_TTL_SECONDS);
-				OC_Log::write('chooser', 'cached IP: ' . $_SERVER['REMOTE_ADDR'] . ' owned by ' . $user_id, OC_Log::INFO);
+				OC_Log::write('chooser', 'cached IP: ' . $requested_pod_ip . ' owned by ' . $user_id, OC_Log::INFO);
 			}
-			// this should implement the case of a request from a pod, but not also a request from localhost...
-			// to be continued
-			////// REPLACE BELOW
-			foreach($list_array as $line){
-				$entries = explode("|", $line);
-				if(count($entries)<2){
-					continue;
-				}
-				// pod_name|container_name|image_name|pod_ip|node_ip|owner|age(s)|status|ssh_port|https_port
-				$ip = trim($entries[3]);
-				$owner = trim($entries[5]);
-				OC_Log::write('chooser', 'IP '.$_SERVER['REMOTE_ADDR'].' : '.$ip.' : '.$owner, OC_Log::WARN);
-				// Request from user container or vm for /files/ or other php-served URL
-				if(!empty($ip) && !empty($owner) && !empty($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR']==$ip){
-					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
-					$user_id = $owner;
-					\OC::$session->set('user_id', $owner);
-					break;
-				}
-				// Request from localhost to verify request from user container for
-				// /storage/ - served by Apache
-				if(!empty($_SERVER['REMOTE_ADDR']) && ($_SERVER['REMOTE_ADDR']=="localhost" || $_SERVER['REMOTE_ADDR']=="127.0.0.1") &&
-						!empty($ip) && !empty($owner) && !empty($_SERVER['HTTP_IP']) && $_SERVER['HTTP_IP']==$ip){
-					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
-					$user_id = $owner;
-					\OC::$session->set('user_id', $owner);
-					break;
-				}
+			// If a user_id was found, then set the session and return
+			if($user_id != ''){
+				OC_Log::write('chooser', 'CHECK IP: '.$requested_pod_ip.":".$user_id, OC_Log::INFO);
+				\OC::$session->set('user_id', $user_id);
 			}
-			////// REPLACE ABOVE
-			OC_Log::write('chooser', 'user_id: '.$user_id, OC_Log::DEBUG);
 			return $user_id;
 		}
 		elseif(isset($_SERVER['REMOTE_ADDR']) && self::checkTrusted($_SERVER['REMOTE_ADDR'])){
