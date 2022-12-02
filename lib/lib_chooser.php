@@ -53,33 +53,32 @@ class OC_Chooser {
 	}
 
 	public static function checkIP(){
-		if(isset($_SERVER['REMOTE_ADDR']) && self::checkUserVlan($_SERVER['REMOTE_ADDR'])){
-			$user_id = '';
-			$requested_pod_ip = '';
-			// For a request from localhost (Apache) to verify /storage, $_SERVER['REMOTE_ADDR']=="localhost", and
-			//   and $_SERVER['HTTP_IP'] is the pod IP
-			if(($_SERVER['REMOTE_ADDR']=="localhost" || $_SERVER['REMOTE_ADDR']=="127.0.0.1") && !empty($_SERVER['HTTP_IP'])) {
-				$requested_pod_ip = $_SERVER['HTTP_IP'];
-			// For a request from a user pod, $_SERVER['REMOTE_ADDR'] will be the pod IP
+		$ip_to_check = '';
+		if(isset($_SERVER['REMOTE_ADDR'])){
+			if(($_SERVER['REMOTE_ADDR'] == "localhost" || $_SERVER['REMOTE_ADDR'] == "127.0.0.1") && !empty($_SERVER['HTTP_IP'])){ // if the request is from apache via checkpw.sh
+				$ip_to_check = $_SERVER['HTTP_IP'];
 			} else {
-				$requested_pod_ip = $_SERVER['REMOTE_ADDR'];
+				$ip_to_check = $_SERVER['REMOTE_ADDR'];
 			}
-			$apc_cache_key = 'check_vlan_' . $requested_pod_ip;
+		}
+		if($ip_to_check != '' && self::checkUserVlan($ip_to_check)){
+			$user_id = '';
+			$apc_cache_key = 'check_vlan_' . $ip_to_check;
 			// Try to fetch the user_id for this IP address from the cache
 			if (($user_id = apc_fetch($apc_cache_key)) === false) {
 				// If it's not cached, ask the backend and cache the result
-				$user_id = file_get_contents(self::$vlan_get_podip_owner_url . $requested_pod_ip);
+				$user_id = file_get_contents(self::$vlan_get_podip_owner_url . $ip_to_check);
 				apc_add($apc_cache_key, $user_id, self::$IPS_TTL_SECONDS);
-				OC_Log::write('chooser', 'cached IP: ' . $requested_pod_ip . ' owned by ' . $user_id, OC_Log::INFO);
+				OC_Log::write('chooser', 'cached IP: ' . $ip_to_check . ' owned by ' . $user_id, OC_Log::INFO);
 			}
 			// If a user_id was found, then set the session and return
 			if($user_id != ''){
-				OC_Log::write('chooser', 'CHECK IP: '.$requested_pod_ip.":".$user_id, OC_Log::INFO);
+				OC_Log::write('chooser', 'CHECK IP: '.$ip_to_check.":".$user_id, OC_Log::INFO);
 				\OC::$session->set('user_id', $user_id);
 			}
 			return $user_id;
 		}
-		elseif(isset($_SERVER['REMOTE_ADDR']) && self::checkTrusted($_SERVER['REMOTE_ADDR'])){
+		elseif($ip_to_check != '' && self::checkTrusted($ip_to_check)){
 			if(isset($_SERVER['PHP_AUTH_USER']) && \OC_User::userExists($_SERVER['PHP_AUTH_USER'])){
 				OC_Log::write('chooser', 'user_id: '.$_SERVER['PHP_AUTH_USER'], OC_Log::DEBUG);
 				
