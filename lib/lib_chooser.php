@@ -4,7 +4,7 @@ class OC_Chooser {
 
 	private static $uservlannets = null;
 	private static $trustednets = null;
-	private static $IPS_TTL_SECONDS = 3600;
+	private static $IPS_TTL_SECONDS = 15;
 	private static $STORAGE_TOKEN_DEVICE_NAME = 'storage';
 	private static $vlan_get_podip_owner_url = 'http://kube.sciencedata.dk/get_podip_owner?ip=';
 	
