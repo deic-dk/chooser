@@ -413,7 +413,30 @@ if(\OCP\App::isEnabled('files_sharding') &&
 
 // And off we go!
 if($ok){
+	// Make sure we don't set a session cookie when serving a shared directory/file.
+	if(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0 ||
+			strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/shared/")===0 ||
+			strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/themes/deic_theme_oc7/apps/files_sharing/")===0 ||
+			strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/apps/files_sharing/")===0 ||
+			strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/")===0 ||
+			strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingout/")===0){
+		if(!headers_sent()){
+			OC_Log::write('chooser','Removing cookies', OC_Log::WARN);
+			ini_set('session.use_cookies', '0');
+			ini_set('output_buffering', 'Off');
+			\OC_Util::teardownFS();
+			session_destroy();
+			$session_id = session_id();
+			unset($_COOKIE[$session_id]);
+			header_remove('Set-Cookie');
+		}
+		else{
+			OC_Log::write('chooser','Headers already sent', OC_Log::WARN);
+		}
+	}
+	
 	$server->exec();
+	
 }
 else{
 	//throw new \Sabre\DAV\Exception\Forbidden($_SERVER['REQUEST_METHOD'].' currently not allowed.');
