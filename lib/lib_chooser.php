@@ -5,6 +5,7 @@ class OC_Chooser {
 	private static $uservlannets = null;
 	private static $trustednets = null;
 	private static $vlanlisturl = null;
+	private static $vlanlistpassword = null;
 	private static $IPS_TTL_SECONDS = 30;
 	private static $IPS_CACHE_KEY = 'compute_ips';
 	private static $STORAGE_TOKEN_DEVICE_NAME = 'storage';
@@ -34,6 +35,12 @@ class OC_Chooser {
 		if(self::$vlanlisturl===null){
 			self::$vlanlisturl = trim(\OCP\Config::getSystemValue('vlanlisturl', ''));
 		}
+		// We now use Kubernetes to fire up user containers. And they no longer each have a vlan, but
+		// just a 10.2 ip address.
+		if(self::$vlanlistpassword===null){
+			self::$vlanlistpassword = OC_Appconfig::getValue('user_pods', 'getContainersPassword');
+			
+		}
 	}
 	
 	public static function checkTrusted($remoteIP){
@@ -61,10 +68,10 @@ class OC_Chooser {
 			$user_id = '';
 			$list_array = [];
 			if(!empty(self::$vlanlisturl) && ($list_array = apc_fetch(self::$IPS_CACHE_KEY)) === false){
-				$list_line = file_get_contents(self::$vlanlisturl);
+				$list_line = file_get_contents(self::$vlanlisturl.'?password='.self::$vlanlistpassword);
 				$list_array = explode("\n", $list_line);
 				apc_add(self::$IPS_CACHE_KEY, $list_array, self::$IPS_TTL_SECONDS);
-				OC_Log::write('chooser', 'Refreshed IP cache: '.$list_array[0], OC_Log::INFO);
+				OC_Log::write('chooser', 'Refreshed IP cache: '.$list_array[0], OC_Log::WARN);
 			}
 			foreach($list_array as $line){
 				$entries = explode("|", $line);
