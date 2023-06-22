@@ -3,6 +3,9 @@
 require_once('apps/chooser/lib/lib_chooser.php');
 require_once('apps/chooser/lib/device_auth.php');
 
+// If this is a request from 10.2.0.0/16 or 10.0.0.0/24 we allow http.
+OCP\Util::connectHook('OC', 'initSession', 'OC_Chooser', 'checkAllowHttp');
+
 // This is to add device auth to the /ocs/ stuff called by the sync clients.
 if(!empty($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/ocs/")===0){
 	OCP\Util::connectHook('OC', 'initSession', 'Sabre\DAV\Auth\Backend\Device', 'login');

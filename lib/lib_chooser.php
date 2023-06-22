@@ -372,5 +372,15 @@ END;
 				"poll"=>array("token"=>$token, "endpoint"=>$actual_link));
 		return $values;
 	}
+	
+	public static function checkAllowHttp(){
+		// This is a hack: In base.php, checkSSL() is called right after session initialization,
+		// i.e. right after this hook is called. checkSSL() ignores forcessl in the config file
+		// if it thinks it's running in cli mode.
+		if(!empty($_SERVER['REMOTE_ADDR']) && (self::checkTrusted($_SERVER['REMOTE_ADDR']) ||
+				self::checkUserVlan($_SERVER['REMOTE_ADDR']))){
+			\OC::$CLI = true;
+		}
+	}
 
 }
