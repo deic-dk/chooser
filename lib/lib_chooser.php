@@ -64,7 +64,8 @@ class OC_Chooser {
 	}
 
 	public static function checkIP(){
-		if(isset($_SERVER['REMOTE_ADDR']) && self::checkUserVlan($_SERVER['REMOTE_ADDR'])){
+		if(isset($_SERVER['REMOTE_ADDR']) && self::checkUserVlan($_SERVER['REMOTE_ADDR']) ||
+				($_SERVER['REMOTE_ADDR']=="localhost" || $_SERVER['REMOTE_ADDR']=="127.0.0.1")){
 			$user_id = '';
 			$list_array = [];
 			if(!empty(self::$vlanlisturl) && ($list_array = apc_fetch(self::$IPS_CACHE_KEY)) === false){
@@ -99,6 +100,20 @@ class OC_Chooser {
 					break;
 				}
 			}
+			$internalDavDir = trim(trim(self::getInternalDavDir($user_id), '/')).'/';
+			$internalDavDir = preg_replace('|//+|', '/', $internalDavDir);
+			$requestPath = trim($_SERVER['REQUEST_URI'], '/');
+			$requestPath = preg_replace('|^files/+|', '', $requestPath);
+			$requestPath = preg_replace('|//+|', '/', $requestPath);
+			if(self::getInternalDavEnabled($user_id)!='yes' ||
+					!empty($internalDavDir) && $internalDavDir!='/' &&
+					strpos($requestPath, $internalDavDir)!==0 &&
+					$internalDavDir!=$requestPath && $internalDavDir!=$requestPath.'/'){
+						OC_Log::write('chooser', 'Declining request for '.$requestPath.
+								' outside of allowed path '.$internalDavDir.' for '.$user_id.':'.
+								self::getInternalDavEnabled($user_id), OC_Log::WARN);
+				return '';
+			}
 			OC_Log::write('chooser', 'user_id: '.$user_id, OC_Log::DEBUG);
 			return $user_id;
 		}
@@ -127,8 +142,18 @@ class OC_Chooser {
 		return "";
 	}
 
-	public static function getInternalDavEnabled() {
-		return \OCP\Config::getUserValue(\OCP\USER::getUser(), 'chooser', 'allow_internal_dav', 'no');
+	public static function getInternalDavEnabled($user='') {
+		if(empty($user)){
+			$user = \OCP\USER::getUser();
+		}
+		return \OCP\Config::getUserValue($user, 'chooser', 'allow_internal_dav', 'no');
+	}
+	
+	public static function getInternalDavDir($user='') {
+		if(empty($user)){
+			$user = \OCP\USER::getUser();
+		}
+		return \OCP\Config::getUserValue($user, 'chooser', 'internal_dav_dir', '');
 	}
 
 	public static function getStorageEnabled() {
@@ -141,6 +166,10 @@ class OC_Chooser {
 			throw new \Exception("Must be yes or no: $value");
 		}
 		return \OCP\Config::setUserValue(\OCP\USER::getUser(), 'chooser', 'allow_internal_dav', $value);
+	}
+	
+	public static function setInternalDavDir($value) {
+		return \OCP\Config::setUserValue(\OCP\USER::getUser(), 'chooser', 'internal_dav_dir', $value);
 	}
 
 	// Copied from files_external

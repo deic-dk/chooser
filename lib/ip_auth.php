@@ -73,7 +73,8 @@ class IP extends AbstractBasic {
 		}
 		else{
 			//return parent::authenticate($server, $realm);
-			return true;
+			//return true;
+			throw new \Sabre\DAV\Exception\NotAuthenticated('Authentication failed');
 		}
 	}
 

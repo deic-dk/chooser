@@ -2,7 +2,7 @@
 	width: 460px;
 }
 
-#chooser_settings_submit {
+#chooser_dn_submit, #chooser_dav_path_submit {
 	vertical-align: top;
 	margin-top: 4px;
 }
