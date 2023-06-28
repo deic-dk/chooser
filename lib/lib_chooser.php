@@ -100,19 +100,21 @@ class OC_Chooser {
 					break;
 				}
 			}
-			$internalDavDir = trim(trim(self::getInternalDavDir($user_id), '/')).'/';
-			$internalDavDir = preg_replace('|//+|', '/', $internalDavDir);
-			$requestPath = trim($_SERVER['REQUEST_URI'], '/');
-			$requestPath = preg_replace('|^files/+|', '', $requestPath);
-			$requestPath = preg_replace('|//+|', '/', $requestPath);
-			if(self::getInternalDavEnabled($user_id)!='yes' ||
-					!empty($internalDavDir) && $internalDavDir!='/' &&
-					strpos($requestPath, $internalDavDir)!==0 &&
-					$internalDavDir!=$requestPath && $internalDavDir!=$requestPath.'/'){
-						OC_Log::write('chooser', 'Declining request for '.$requestPath.
-								' outside of allowed path '.$internalDavDir.' for '.$user_id.':'.
-								self::getInternalDavEnabled($user_id), OC_Log::WARN);
-				return '';
+			if(!empty($user_id)){
+				$internalDavDir = trim(trim(self::getInternalDavDir($user_id), '/')).'/';
+				$internalDavDir = preg_replace('|//+|', '/', $internalDavDir);
+				$requestPath = trim($_SERVER['REQUEST_URI'], '/');
+				$requestPath = preg_replace('|^files/+|', '', $requestPath);
+				$requestPath = preg_replace('|//+|', '/', $requestPath);
+				if(self::getInternalDavEnabled($user_id)!='yes' ||
+						!empty($internalDavDir) && $internalDavDir!='/' &&
+						strpos($requestPath, $internalDavDir)!==0 &&
+						$internalDavDir!=$requestPath && $internalDavDir!=$requestPath.'/'){
+							OC_Log::write('chooser', 'Declining request for '.$requestPath.
+									' outside of allowed path '.$internalDavDir.' for '.$user_id.':'.
+									self::getInternalDavEnabled($user_id), OC_Log::WARN);
+							return '';
+				}
 			}
 			OC_Log::write('chooser', 'user_id: '.$user_id, OC_Log::DEBUG);
 			return $user_id;
@@ -403,10 +405,14 @@ END;
 	}
 	
 	public static function checkAllowHttp(){
+		// Allow non-https requests from user pods.
 		// This is a hack: In base.php, checkSSL() is called right after session initialization,
 		// i.e. right after this hook is called. checkSSL() ignores forcessl in the config file
 		// if it thinks it's running in cli mode.
-		if(!empty($_SERVER['REMOTE_ADDR']) && (self::checkTrusted($_SERVER['REMOTE_ADDR']) ||
+		if(!empty($_SERVER['SERVER_PROTOCOL']) && stripos($_SERVER['SERVER_PROTOCOL'], 'https')===false &&
+				!empty($_SERVER['REQUEST_URI']) && (strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT.'/files/')===0 ||
+						$_SERVER['REQUEST_URI']==OC::$WEBROOT.'/files') &&
+				!empty($_SERVER['REMOTE_ADDR']) && (self::checkTrusted($_SERVER['REMOTE_ADDR']) ||
 				self::checkUserVlan($_SERVER['REMOTE_ADDR']))){
 			\OC::$CLI = true;
 		}
