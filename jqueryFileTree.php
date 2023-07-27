@@ -27,21 +27,21 @@ if(OCP\App::isEnabled('user_group_admin')){
 	OC::$CLASSPATH['OC_User_Group_Admin_Backend'] ='apps/user_group_admin/lib/backend.php';
 	OC_Group::useBackend(new OC_User_Group_Admin_Backend());
 	// Allow browsing group folders
-	if(!empty($_POST['group'])){
+	if(!empty($_REQUEST['group'])){
 		\OC\Files\Filesystem::tearDown();
-		$groupDir = '/'.$user.'/user_group_admin/'.$_POST['group'];
+		$groupDir = '/'.$user.'/user_group_admin/'.$_REQUEST['group'];
 		\OC\Files\Filesystem::init($user, $groupDir);
 	}
 }
 
-//$_POST['dir'] = urldecode($_POST['dir']);
-OC_Log::write('chooser','Listing: '.$_POST['dir'], OC_Log::WARN);
-if( $_POST['dir']!= '' && !\OC\Files\Filesystem::file_exists($_POST['dir']) ) {
+//$_REQUEST['dir'] = urldecode($_REQUEST['dir']);
+OC_Log::write('chooser','Listing: '.$_REQUEST['dir'], OC_Log::WARN);
+if( $_REQUEST['dir']!= '' && !\OC\Files\Filesystem::file_exists($_REQUEST['dir']) ) {
 	exit;
 }
 
 $files = array();
-foreach( \OC\Files\Filesystem::getDirectoryContent( $_POST['dir'] ) as $i ) {
+foreach( \OC\Files\Filesystem::getDirectoryContent( $_REQUEST['dir'] ) as $i ) {
 	if(array_key_exists('path', $i) && (basename($i['path']) == '.' || basename($i['path']) == '..')){
 		continue;
 	}
@@ -51,13 +51,13 @@ foreach( \OC\Files\Filesystem::getDirectoryContent( $_POST['dir'] ) as $i ) {
 }
 
 // Default to true
-$showRoot = empty($_POST['showRoot']) || $_POST['showRoot']!='false' && $_POST['showRoot']!='no';
+$showRoot = empty($_REQUEST['showRoot']) || $_REQUEST['showRoot']!='false' && $_REQUEST['showRoot']!='no';
 // Default to true
-$showHidden = empty($_POST['showHidden']) || $_POST['showHidden']!='false' && $_POST['showHidden']!='no';
+$showHidden = empty($_REQUEST['showHidden']) || $_REQUEST['showHidden']!='false' && $_REQUEST['showHidden']!='no';
 // Default to true
-$showFiles = empty($_POST['showFiles']) || $_POST['showFiles']!='false' && $_POST['showFiles']!='no';
+$showFiles = empty($_REQUEST['showFiles']) || $_REQUEST['showFiles']!='false' && $_REQUEST['showFiles']!='no';
 // Default to false
-$deleteIcons =!empty($_POST['deleteIcons']) && ($_POST['deleteIcons']=='true' || $_POST['deleteIcons']=='yes');
+$deleteIcons =!empty($_REQUEST['deleteIcons']) && ($_REQUEST['deleteIcons']=='true' || $_REQUEST['deleteIcons']=='yes');
 
 echo "<ul class=\"jqueryFileTree\" style=\"display: none;\">";
 // All dirs
@@ -65,8 +65,8 @@ foreach( $files as $file ) {
 	if(!$showHidden && strpos($file['name'], '.')===0){
 		continue;
 	}
-	$path = rtrim($_POST['dir'], '/').'/'.ltrim($file['name'], '/');
-	$showPath = ($showRoot?rtrim($_POST['dir'], '/'):'').'/'.ltrim($file['name'], '/');
+	$path = rtrim($_REQUEST['dir'], '/').'/'.ltrim($file['name'], '/');
+	$showPath = ($showRoot?rtrim($_REQUEST['dir'], '/'):'').'/'.ltrim($file['name'], '/');
 	$path = preg_replace('/^\//', '', $path);
 	$showPath = preg_replace('/^\//', '', $showPath);
 	if(\OC\Files\Filesystem::is_dir($path) || $file['mimetype'] == 'httpd/unix-directory') {
@@ -82,8 +82,8 @@ foreach( $files as $file ) {
 	if(!$showHidden && strpos($file['name'], '.')===0){
 		continue;
 	}
-	$path = rtrim($_POST['dir'], '/').'/'.ltrim($file['name'], '/');
-	$showPath = ($showRoot?rtrim($_POST['dir'], '/'):'').'/'.ltrim($file['name'], '/');
+	$path = rtrim($_REQUEST['dir'], '/').'/'.ltrim($file['name'], '/');
+	$showPath = ($showRoot?rtrim($_REQUEST['dir'], '/'):'').'/'.ltrim($file['name'], '/');
 	$path = preg_replace('/^\//', '', $path);
 	$showPath = preg_replace('/^\//', '', $showPath);
 	if(!\OC\Files\Filesystem::is_dir($path) && $file['mimetype'] != 'httpd/unix-directory' &&
