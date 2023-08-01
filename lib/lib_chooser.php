@@ -6,6 +6,7 @@ class OC_Chooser {
 	private static $trustednets = null;
 	private static $vlanlisturl = null;
 	private static $vlanlistpassword = null;
+	private static $vlantrusteduser = null;
 	private static $IPS_TTL_SECONDS = 30;
 	private static $IPS_CACHE_KEY = 'compute_ips';
 	private static $STORAGE_TOKEN_DEVICE_NAME = 'storage';
@@ -35,8 +36,11 @@ class OC_Chooser {
 		if(self::$vlanlisturl===null){
 			self::$vlanlisturl = trim(\OCP\Config::getSystemValue('vlanlisturl', ''));
 		}
+		if(self::$vlantrusteduser===null){
+			self::$vlantrusteduser = trim(\OCP\Config::getSystemValue('vlantrusteduser', ''));
+		}
 		// We now use Kubernetes to fire up user containers. And they no longer each have a vlan, but
-		// just a 10.2 ip address.
+		// just a 10.2 ip address. Currently, no password is needed though.
 		if(self::$vlanlistpassword===null){
 			self::$vlanlistpassword = OC_Appconfig::getValue('user_pods', 'getContainersPassword');
 			
@@ -86,8 +90,14 @@ class OC_Chooser {
 				// Request from user container or vm for /files/ or other php-served URL
 				if(!empty($ip) && !empty($owner) && !empty($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR']==$ip){
 					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
-					$user_id = $owner;
-					\OC::$session->set('user_id', $owner);
+					// We allow requests from pods owned by 'cloud' to set any user in Apache auth
+					if(!empty($_SERVER['PHP_AUTH_USER']) && $owner == self::$vlantrusteduser){
+						$user_id = $_SERVER['PHP_AUTH_USER'];
+					}
+					else{
+						$user_id = $owner;
+					}
+					\OC::$session->set('user_id', $user_id);
 					break;
 				}
 				// Request from localhost to verify request from user container for
@@ -95,8 +105,13 @@ class OC_Chooser {
 				if(!empty($_SERVER['REMOTE_ADDR']) && ($_SERVER['REMOTE_ADDR']=="localhost" || $_SERVER['REMOTE_ADDR']=="127.0.0.1") &&
 						!empty($ip) && !empty($owner) && !empty($_SERVER['HTTP_IP']) && $_SERVER['HTTP_IP']==$ip){
 					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
-					$user_id = $owner;
-					\OC::$session->set('user_id', $owner);
+					if(!empty($_SERVER['PHP_AUTH_USER']) && $owner == self::$vlantrusteduser){
+						$user_id = $_SERVER['PHP_AUTH_USER'];
+					}
+					else{
+						$user_id = $owner;
+					}
+					\OC::$session->set('user_id', $user_id);
 					break;
 				}
 			}
