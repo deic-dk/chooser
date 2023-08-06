@@ -34,13 +34,13 @@ class OC_Chooser {
 			}
 		}
 		if(self::$vlanlisturl===null){
-			self::$vlanlisturl = trim(\OCP\Config::getSystemValue('vlanlisturl', ''));
+			self::$vlanlisturl = OC_Appconfig::getValue('user_pods', 'getContainersURL');
 		}
 		if(self::$vlantrusteduser===null){
-			self::$vlantrusteduser = trim(\OCP\Config::getSystemValue('vlantrusteduser', ''));
+			self::$vlantrusteduser = OC_Appconfig::getValue('user_pods', 'trustedUser');
 		}
 		// We now use Kubernetes to fire up user containers. And they no longer each have a vlan, but
-		// just a 10.2 ip address. Currently, no password is needed though.
+		// just a 10.2 ip address. So the word vlan is misleading, but we keep it for now...
 		if(self::$vlanlistpassword===null){
 			self::$vlanlistpassword = OC_Appconfig::getValue('user_pods', 'getContainersPassword');
 			
