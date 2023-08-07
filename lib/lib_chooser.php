@@ -86,7 +86,7 @@ class OC_Chooser {
 				// pod_name|container_name|image_name|pod_ip|node_ip|owner|age(s)|status|ssh_port|https_port
 				$ip = trim($entries[3]);
 				$owner = trim($entries[5]);
-				OC_Log::write('chooser', 'IP '.$_SERVER['REMOTE_ADDR'].' : '.$ip.' : '.$owner, OC_Log::WARN);
+				OC_Log::write('chooser', 'IP '.$_SERVER['REMOTE_ADDR'].' : '.$ip.' : '.$owner, OC_Log::INFO);
 				// Request from user container or vm for /files/ or other php-served URL
 				if(!empty($ip) && !empty($owner) && !empty($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR']==$ip){
 					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
@@ -115,7 +115,8 @@ class OC_Chooser {
 					break;
 				}
 			}
-			if(!empty($user_id)){
+			$allowedQueryUser = trim(\OCP\Config::getSystemValue('vlantrusteduser', ''));
+			if(!empty($user_id) && $user_id!=$allowedQueryUser){
 				$internalDavDir = trim(trim(self::getInternalDavDir($user_id), '/')).'/';
 				$internalDavDir = preg_replace('|//+|', '/', $internalDavDir);
 				$requestPath = trim($_SERVER['REQUEST_URI'], '/');
