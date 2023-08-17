@@ -17,10 +17,33 @@
 // Output a list of files for jQuery File Tree
 //
 
-\OCP\JSON::checkLoggedIn();
+$user = OCP\USER::getUser();
+if(empty($user)){
+	$user = \OC_Chooser::checkIP();
+	OC_Log::write('chooser', 'Checking user: '.$user, OC_Log::WARN);
+	if(!empty($user)){
+		$userPrivateServer = \OCA\FilesSharding\Lib::getServerForUser($user, true);
+		OC_Log::write('chooser', 'Checking host: '.$user.':'.$_SERVER['HTTP_HOST'].':'.$_SERVER['SERVER_NAME'].':'.
+				$userPrivateServer, OC_Log::WARN);
+		$userServer = \OC_Chooser::privateToUserVlan($userPrivateServer);
+		if(!empty($userServer) && !\OCA\FilesSharding\Lib::isServerMe($userServer)){
+			\OC_Response::redirect(rtrim($userServer, '/').'/'.ltrim($_SERVER['REQUEST_URI'], '/'));
+			exit;
+		}
+		else{
+			\OC\Files\Filesystem::init($user, '/'.$user.'/files');
+		}
+	}
+}
+if(empty($user) /*|| $user!=$allowedQueryUser*/){
+	http_response_code(401);
+	exit;
+}
+
+//\OCP\JSON::checkLoggedIn();
 \OCP\JSON::checkAppEnabled('chooser');
 
-$user = \OC_User::getUser();
+//$user = \OC_User::getUser();
 
 if(OCP\App::isEnabled('user_group_admin')){
 	// Show folders shared via user_group_admin if available
@@ -35,8 +58,9 @@ if(OCP\App::isEnabled('user_group_admin')){
 }
 
 //$_REQUEST['dir'] = urldecode($_REQUEST['dir']);
-OC_Log::write('chooser','Listing: '.$_REQUEST['dir'], OC_Log::WARN);
+OC_Log::write('chooser','Listing: '.$user.':'.$_REQUEST['dir'], OC_Log::WARN);
 if( $_REQUEST['dir']!= '' && !\OC\Files\Filesystem::file_exists($_REQUEST['dir']) ) {
+	OC_Log::write('chooser','Directory does not exist: '.$_REQUEST['dir'], OC_Log::ERROR);
 	exit;
 }
 

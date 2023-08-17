@@ -455,7 +455,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		}
 		
 		//if(stripos($_SERVER['HTTP_USER_AGENT'], "cadaver")===false && stripos($_SERVER['HTTP_USER_AGENT'], "curl")===false){
-		if(!isset($_SERVER['HTTP_USER_AGENT'])  || strpos($_SERVER['HTTP_USER_AGENT'], "IP_PASS:")===0 ||
+		if(!isset($_SERVER['HTTP_USER_AGENT']) || strpos($_SERVER['HTTP_USER_AGENT'], "IP_PASS:")===0 ||
 				stripos($_SERVER['HTTP_USER_AGENT'], "mirall")===false &&
 				stripos($_SERVER['HTTP_USER_AGENT'], "csyncoC")===false /*&&
 				stripos($_SERVER['HTTP_USER_AGENT'], "iOs")===false &&

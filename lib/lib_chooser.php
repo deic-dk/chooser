@@ -57,6 +57,33 @@ class OC_Chooser {
 		return false;
 	}
 	
+	public static function privateToUserVlan($url){
+		$parsedUrl = parse_url($url);
+		$ip = $parsedUrl['host'];
+		self::loadNetValues();
+		// We're assuming one uservlannet and one trustednet
+		if(empty(self::$uservlannets) || empty(self::$trustednets) ||
+				count(self::$uservlannets)>1 || count(self::$trustednets)>1){
+					OC_Log::write('chooser', 'Cannot resolve '.$ip.' to '.
+							serialize(self::$uservlannets).count(self::$uservlannets).count(self::$trustednets), OC_Log::ERROR);
+			return null;
+		}
+		if(!self::checkTrusted($ip)){
+			OC_Log::write('chooser', 'Not trusted: '.$url, OC_Log::ERROR);
+			return null;
+		}
+		$userDigits = explode('.', self::$uservlannets[0]);
+		$trustedDigits = explode('.', self::$trustednets[0]);
+		$maxDigits = count($userDigits)<count($trustedDigits)?count($userDigits):count($trustedDigits);
+		$userBase = implode('.', array_slice($userDigits, 0, $maxDigits));
+		$trustedBase = implode('.', array_slice($trustedDigits, 0, $maxDigits));
+		$userVlanIP = preg_replace('|^'.$trustedBase.'|', $userBase, $ip);
+		$userVlanURL = $parsedUrl['scheme'].'://'.$userVlanIP.$parsedUrl['path'].
+			(empty($parsedUrl['query'])?'':'?'.$parsedUrl['query']).
+			(empty($parsedUrl['anchor'])?'':'#'.$parsedUrl['anchor']);
+		return $userVlanURL;
+	}
+	
 	private static function checkUserVlan($remoteIP){
 		self::loadNetValues();
 		foreach(self::$uservlannets as $vlannet){
@@ -115,8 +142,7 @@ class OC_Chooser {
 					break;
 				}
 			}
-			$allowedQueryUser = trim(\OCP\Config::getSystemValue('vlantrusteduser', ''));
-			if(!empty($user_id) && $user_id!=$allowedQueryUser){
+			if(!empty($user_id) && /*this is the owner of the pod*/ $owner!=self::$vlantrusteduser){
 				$internalDavDir = trim(trim(self::getInternalDavDir($user_id), '/')).'/';
 				$internalDavDir = preg_replace('|//+|', '/', $internalDavDir);
 				$requestPath = trim($_SERVER['REQUEST_URI'], '/');
