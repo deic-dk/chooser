@@ -327,7 +327,7 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 			throw new \Sabre\DAV\Exception\NotFound('File with name ' . $filepath . ' could not be located');
 		}
 		
-		OC_Log::write('chooser','Returning Sabre '.$info->getType().': '.$path.' : '.$info->getPath(), OC_Log::INFO);
+		//OC_Log::write('chooser','Returning Sabre '.$info->getType().': '.$path.' : '.$info->getPath(), OC_Log::INFO);
 		
 		if ($info->getType() === 'dir') {
 			$node = new \OC_Connector_Sabre_Directory($this->fileView, $info);
