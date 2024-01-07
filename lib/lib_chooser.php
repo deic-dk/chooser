@@ -110,7 +110,7 @@ class OC_Chooser {
 				if(count($entries)<2){
 					continue;
 				}
-				// pod_name|container_name|image_name|pod_ip|node_ip|owner|age(s)|status|ssh_port|https_port
+				// pod_name|container_name|image_name|pod_ip|node_ip|owner|age(s)|status|ssh_port|ssh_username|https_port|uri
 				$ip = trim($entries[3]);
 				$owner = trim($entries[5]);
 				OC_Log::write('chooser', 'IP '.$_SERVER['REMOTE_ADDR'].' : '.$ip.' : '.$owner, OC_Log::INFO);
