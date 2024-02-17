@@ -28,13 +28,35 @@ $l = OC_L10N::get('chooser');
 
 	<br />
 
-	<?php p($l->t('Allow authentication with your personal X.509 certificate:').' '); ?>
-	<input type="text" id="ssl_cert_dn"
-		value="<?php print(isset($_['ssl_cert_dn'])?$_['ssl_cert_dn']:''); ?>"
-		placeholder="<?php p($l->t('Certificate subject'));?>" />
-	<label id="chooser_dn_submit" class="button"><?php p($l->t("Save"));?></label>
+	<?php p($l->t('Generate new personal X.509 certificate:').' '); ?>
+	<input type="text" id="ssl_days"
+		placeholder="<?php p($l->t('Days of validity'));?>" />
+	<label id="chooser_sd_cert_generate" class="button"><?php p($l->t("Generate"));?></label>
+	<label><?php p($l->t("Existing"));?>:</label>
+	<span class="chooser_sd_cert<?php if(empty($_['sd_cert_dn'])){ ?> hidden<?php } ?>">DN:</span><label id="chooser_sd_cert_dn" class="text"><?php echo($_['sd_cert_dn']);?></label>
+	<span class="chooser_sd_cert<?php if(empty($_['sd_cert_dn'])){ ?> hidden"<?php } ?>">Expires:</span><label id="chooser_sd_cert_expires" class="text"><?php echo($_['sd_cert_expires']);?></label>
 	
 	<br />
+
+	<?php p($l->t('Allow authentication with external X.509 certificate:').' '); ?>
+	<input type="text" id="ssl_cert_dn"
+		value=""
+		placeholder="<?php p($l->t('Certificate subject DN'));?>" />
+	<label id="chooser_dn_submit" class="button"><?php p($l->t("Add"));?></label>
+
+	<br />
+	
+	<b>Accepted DNs</b>:<br />
+	<div id="chooser_active_dns">
+	<?php
+	foreach($_['ssl_active_dns'] as $dn){
+	?>
+		<div class="chooser_active_dn">
+			<label class="text"><?php echo($dn);?></label>
+			<label class="chooser_dn_deactivate btn btn-flat" dn="<?php echo($dn);?>" title="<?php p($l->t('Remove'));?>">-</label>
+		</div>
+	<?php } ?>
+	</div>
 	
 	<label id="chooser_msg"></label>
 </fieldset>

@@ -290,7 +290,7 @@ END;
 		return $res;
 	}
 
-	public static function getCertIndex($user) {
+	private static function getCertIndex($user) {
 		$index = 0;
 		while($index<self::$MAX_CERTS){
 			$subject = \OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
@@ -306,6 +306,15 @@ END;
 		return \OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
 	}
 
+	public static function getActiveDNs($user){
+		$index = self::getCertIndex($user);
+		$dns = [];
+		for($i=0; $i<$index; ++$i){
+			$dns[] = self::getCertSubject($user, $i);
+		}
+		return $dns;
+	}
+
 	public static function addCert($user, $subject) {
 		$index = self::getCertIndex($user);
 		if($index<0){
@@ -314,11 +323,87 @@ END;
 		return \OCP\Config::setUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index, $subject);
 	}
 
-	public static function removeCert($user, $subject) {
-		$sql = "delete FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey LIKE ? AND configvalue = ?";
-		$args = array($user, 'chooser', 'ssl_certificate_subject_%', $subject);
+	public static function removeCert($user, $subject="") {
+		if(empty($subject)){
+			$sql = "delete FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey LIKE ? AND configvalue = ?";
+			$args = array($user, 'chooser', 'ssl_certificate_subject_%', $subject);
+		}
+		else{
+			$sql = "delete FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey LIKE ?";
+			$args = array($user, 'chooser', 'ssl_certificate_subject_%');
+		}
 		$query = \OCP\DB::prepare($sql);
 		return $query->execute($args);
+	}
+	
+	private static function getAppDir($user){
+		\OC_User::setUserId($user);
+		\OC_Util::setupFS($user);
+		$fs = \OCP\Files::getStorage('chooser');
+		if(!$fs){
+			\OC_Log::write('chooser', "ERROR, could not access files of user " . $user, \OC_Log::ERROR);
+			return null;
+		}
+		return $fs->getLocalFile('/');
+	}
+	
+	public static function generateUserCert($days=30, $user="") {
+		if(empty($user)){
+			$user = \OCP\USER::getUser();
+		}
+		$output = "";
+		$ret = "";
+		$certDir = self::getAppDir($user)."ssl";
+		if(!file_exists($certDir)){
+			mkdir($certDir);
+		}
+		$secret  = \OC_Config::getValue('secret', 'secret');
+		$ca_cert  = \OC_Config::getValue('my_ca_certificate', '');
+		$ca_key  = \OC_Config::getValue('my_ca_privatekey', '');
+		// Generate encrypted key and cert request in user_id/chooser/ssl/
+		$reqStr = "openssl req -new -out \"$certDir/userreq.pem\" -newkey rsa:4096 -keyout \"$certDir/userkey.pem\" -subj \"/CN=$user/O=sciencedata.dk\" -passout pass:$secret";
+		OC_Log::write('chooser',"Generating certificate request with: ".$reqStr, OC_Log::WARN);
+		exec($reqStr, $output, $ret);
+		if($ret==0){
+			$signStr = "RANDFILE=/tmp/.random openssl x509 -req -in \"$certDir/userreq.pem\" -CA \"$ca_cert\" -CAkey \"$ca_key\" -CAcreateserial -out \"$certDir/usercert.pem\" -days $days -sha256";
+			OC_Log::write('chooser',"Signing certificate request with: ".$signStr, OC_Log::WARN);
+			exec($signStr, $output, $ret);
+		}
+		if($ret==0){
+			$expires = exec("openssl x509 -enddate -noout -in \"$certDir/usercert.pem\" | awk -F= '{print $2}'", $output, $ret);
+		}
+		if($ret==0){
+			$ret = [];
+			$ret["dn"] = "/CN=$user/O=sciencedata.dk";
+			$ret['expires'] = $expires;
+			return $ret;
+		}
+		else{
+			\OC_Log::write('chooser', "ERROR, could not generate key/certificate for " . $user.". ".serialize($output), \OC_Log::ERROR);
+			return false;
+		}
+	}
+	
+	public static function getSDCertSubject($user) {
+		$output = "";
+		$ret = "";
+		$subject = "";
+		$certDir = self::getAppDir($user)."ssl";
+		if(file_exists("$certDir/usercert.pem")){
+			$subject = exec("openssl x509 -subject -noout -in \"$certDir/usercert.pem\" | awk '{print $2}'", $output, $ret);
+		}
+		return $subject;
+	}
+	
+	public static function getSDCertExpires($user) {
+		$output = "";
+		$ret = "";
+		$expires = "";
+		$certDir = self::getAppDir($user)."ssl";
+		if(file_exists("$certDir/usercert.pem")){
+			$expires = exec("openssl x509 -enddate -noout -in \"$certDir/usercert.pem\" | awk -F= '{print $2}'", $output, $ret);
+		}
+		return $expires;
 	}
 	
 	public static function getDeviceToken($user, $deviceName){

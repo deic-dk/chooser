@@ -10,11 +10,10 @@ OC_Log::write('files_sharding',"Setting DN: ".$user_id.":".$dn, OC_Log::WARN);
 
 $ret = [];
 
-$ret['msg'] = "";
 
 if($dn===""){
 	if(OC_Chooser::removeCert($user_id, $dn)){
-		$ret['message'] .= "Cleared DN";
+		$ret['message'] = "Cleared all DNs. You can no longer authenticate with an SSL certificate.";
 	}
 	else{
 		$ret['error'] = "Failed clearing DN ".$dn." for user ".$user_id;
@@ -22,7 +21,7 @@ if($dn===""){
 }
 
 if(OC_Chooser::addCert($user_id, $dn)){
-	$ret['message'] .= "Saved DN";
+	$ret['message'] = "Added DN ".$dn;
 }
 else{
 	$ret['error'] = "Failed setting DN ".$dn." for user ".$user_id;
