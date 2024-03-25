@@ -351,7 +351,7 @@ END;
 		if(empty($user)){
 			$user = \OCP\USER::getUser();
 		}
-		$output = "";
+		$output = [];
 		$ret = "";
 		$certDir = self::getAppDir($user)."ssl";
 		if(!file_exists($certDir)){
@@ -382,6 +382,40 @@ END;
 			\OC_Log::write('chooser', "ERROR, could not generate key/certificate for " . $user.". ".serialize($output), \OC_Log::ERROR);
 			return false;
 		}
+	}
+	
+	public static function getSDCert($user) {
+		$cert = "";
+		$certDir = self::getAppDir($user)."ssl";
+		if(file_exists("$certDir/usercert.pem")){
+			$cert = file_get_contents("$certDir/usercert.pem");
+		}
+		return $cert;
+	}
+	
+	public static function getSDKey($user) {
+		$output = [];
+		$ret = "";
+		$certDir = self::getAppDir($user)."ssl";
+		$secret  = \OC_Config::getValue('secret', 'secret');
+		$keyStr = "openssl rsa -in $certDir/userkey.pem -passin pass:".$secret;
+		OC_Log::write('chooser',"Executing ".$keyStr, OC_Log::WARN);
+		if(file_exists("$certDir/userkey.pem")){
+			exec($keyStr, $output, $ret);
+		}
+		return implode("\n", $output);
+	}
+	
+	public static function getSDPKCS12($user) {
+		$output = [];
+		$certDir = self::getAppDir($user)."ssl";
+		$secret  = \OC_Config::getValue('secret', 'secret');
+		if(file_exists("$certDir/usercert.pem") && file_exists("$certDir/userkey.pem")){
+			$pkgs12Str = "openssl pkcs12 -export -inkey \"$certDir/userkey.pem\" -in \"$certDir/usercert.pem\" -passout pass: -passin pass:".$secret;
+			OC_Log::write('chooser',"Generating PKCS12 output with ".$pkgs12Str, OC_Log::WARN);
+			$output = shell_exec($pkgs12Str);
+		}
+		return $output;
 	}
 	
 	public static function getSDCertSubject($user) {
