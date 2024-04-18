@@ -29,7 +29,7 @@ $user = \OCP\USER::getUser();
 require_once('apps/chooser/appinfo/apache_note_user.php');
 
 if($key=OC_Chooser::getSDKey($user)){
-	OCP\JSON::success(array('data'=>array('user'=>$user, 'certificate'=>$key)));
+	OCP\JSON::success(array('data'=>array('user'=>$user, 'private_key'=>$key)));
 }
 else{
 	OCP\JSON::error(array('message'=>'Failed obtaining certificates of user '.$user));
