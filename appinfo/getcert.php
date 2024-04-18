@@ -5,12 +5,13 @@ require_once('chooser/lib/lib_chooser.php');
 require_once('chooser/lib/ip_auth.php');
 require_once('chooser/lib/nbf_auth.php');
 
-$subject = isset($_POST['subject']) ? $_POST['subject'] : '';
+// Not relevant - we only store the certificate/key we generate ourselves
+//$subject = isset($_POST['subject']) ? $_POST['subject'] : '';
 
-if(empty($subject)){
+/*if(empty($subject)){
 	header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
 	exit();
-}
+}*/
 
 $ok = false;
 
@@ -34,8 +35,8 @@ $user = \OCP\USER::getUser();
 
 require_once('apps/chooser/appinfo/apache_note_user.php');
 
-if($cert=OC_Chooser::getuserCert($user)){
-	OCP\JSON::success('data'=>array('user'=>$user, 'certificate'=>$cert));
+if($cert=OC_Chooser::getSDCert($user)){
+	OCP\JSON::success(array('data'=>array('user'=>$user, 'certificate'=>$cert)));
 }
 else{
 	OCP\JSON::error(array('message'=>'Failed obtaining certificates of user '.$user));

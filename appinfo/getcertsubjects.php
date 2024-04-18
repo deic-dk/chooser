@@ -7,11 +7,6 @@ require_once('chooser/lib/nbf_auth.php');
 
 $subject = isset($_POST['subject']) ? $_POST['subject'] : '';
 
-if(empty($subject)){
-	header($_SERVER['SERVER_PROTOCOL'] . ' 400 Bad Request');
-	exit();
-}
-
 $ok = false;
 
 if(!empty($_SERVER['PHP_AUTH_USER']) && !empty($_SERVER['PHP_AUTH_PW'])){
@@ -34,11 +29,10 @@ $user = \OCP\USER::getUser();
 
 require_once('apps/chooser/appinfo/apache_note_user.php');
 
-if(OC_Chooser::removeCert()){
-	OCP\JSON::success(array('message'=>'Successfully revoked access to X.509 certificate/key with subject '.
-			$subject.' for user '.$user));
+if($subjects=OC_Chooser::getActiveDNs($user)){
+	OCP\JSON::success(array('data'=>array('user'=>$user, 'subjects'=>$subjects)));
 }
 else{
-	OCP\JSON::error(array('message'=>'Failed revoking access to X.509 subject '.$subject.' for user '.$user));
+	OCP\JSON::error(array('message'=>'Failed obtaining certificates of user '.$user));
 }
 

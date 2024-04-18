@@ -18,6 +18,9 @@
       <mydav>appinfo/remote.php</mydav>
       <addcert>appinfo/addcert.php</addcert>
       <removecert>appinfo/removecert.php</removecert>
+      <getcert>appinfo/getcert.php</getcert>
+      <getkey>appinfo/getkey.php</getkey>
+      <getcertsubjects>appinfo/getcertsubjects.php</getcertsubjects>
     </remote>
 		<!-- seems not to work -->
 		<!-- <public>
