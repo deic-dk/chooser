@@ -411,6 +411,8 @@ if(\OCP\App::isEnabled('files_sharding') &&
 	$ok = false;
 }
 
+session_write_close();
+
 // And off we go!
 if($ok){
 	// Make sure we don't set a session cookie when serving a shared directory/file.
@@ -452,7 +454,7 @@ if(!empty($loggedInUser) && $loggedInUser!=$user_id){
 }
 elseif(session_status()===PHP_SESSION_ACTIVE &&
 		// This is to avoid that the connectivity checks of the admin page
-		// flushes the session.
+		// flush the session.
 		(empty($_SERVER['HTTP_REFERER']) || substr($_SERVER['HTTP_REFERER'], -25)!="/index.php/settings/admin") &&
 		(empty($_SERVER['HTTP_USER_AGENT']) ||
 				stripos($_SERVER['HTTP_USER_AGENT'], "ios")===false && stripos($_SERVER['HTTP_USER_AGENT'], "android")===false)){
