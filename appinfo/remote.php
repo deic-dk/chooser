@@ -102,11 +102,14 @@ elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/public/")===0){
 
 $user = \OC_User::getUser();
 if(empty($user)){
-	if(empty($_SERVER['PHP_AUTH_USER'])){
+	if(empty($_SERVER['PHP_AUTH_USER']) && empty($_SERVER['SSL_CLIENT_I_DN']) &&
+			empty($_SERVER['REDIRECT_SSL_CLIENT_S_DN'])){
 		$headers = apache_request_headers();
 		\OCP\Util::writeLog('chooser','ERROR:  No user for webdav request '.$_SERVER['REQUEST_URI'].'. Headers: '.serialize($headers), \OCP\Util::ERROR);
 	}
-	$user = $_SERVER['PHP_AUTH_USER'];
+	if(!empty($_SERVER['PHP_AUTH_USER'])){
+		$user = $_SERVER['PHP_AUTH_USER'];
+	}
 }
 
 // TODO: more thorough check. Currently the favorites call from iOS
@@ -122,8 +125,10 @@ if((rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/files/"
 }
 elseif($_SERVER['REQUEST_URI']==OC::$WEBROOT."/remote.php/dav" /*&&
 		strtolower($_SERVER['REQUEST_METHOD'])=='head'*/){
-		$_SERVER['REQUEST_URI'] = $_SERVER['REQUEST_URI'];
-		$baseuri = OC::$WEBROOT."/remote.php/dav";
+	$baseuri = OC::$WEBROOT."/remote.php/dav";
+}
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/grid")===0){
+	$baseuri = OC::$WEBROOT."/grid";
 }
 elseif((rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/files/".
 		$user || strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
@@ -228,13 +233,14 @@ elseif($baseuri != OC::$WEBROOT."/sharingin"){
 }
 
 // This is to support cookie/web auth by sync clients
-if(empty($_SERVER['PHP_AUTH_USER'])){
+if(empty($_SERVER['PHP_AUTH_USER']) && empty($_SERVER['SSL_CLIENT_I_DN']) &&
+		empty($_SERVER['REDIRECT_SSL_CLIENT_S_DN'])){
 	$authBackend = new OC_Connector_Sabre_Auth();
 	$server->addPlugin(new \Sabre\DAV\Auth\Plugin($authBackend, $name));
 }
 
 $user = \OC_User::getUser();
-if(empty($user)){
+if(empty($user) && !empty($_SERVER['PHP_AUTH_USER'])){
 	$user = $_SERVER['PHP_AUTH_USER'];
 }
 if(empty($user) && $baseuri == OC::$WEBROOT."/sharingout"){

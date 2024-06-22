@@ -10,6 +10,9 @@ class OC_Chooser {
 	private static $IPS_TTL_SECONDS = 30;
 	private static $IPS_CACHE_KEY = 'compute_ips';
 	private static $STORAGE_TOKEN_DEVICE_NAME = 'storage';
+	private static $trusted_dn_header_host_dns = null;
+	private static $dn_header = null;
+	private static $dnHeaderHostDNs = [];
 	
 	public static $MAX_CERTS = 10;
 	public static $MOVING_CACHE_PREFIX = 'moving_';
@@ -440,6 +443,42 @@ END;
 		return $expires;
 	}
 	
+	public static function getUserFromSubject($subject, $user=""){
+		$user = "";
+		$i = 0;
+		while($i<self::$MAX_CERTS){
+			if(empty($user)){
+				$sql = "SELECT userid, configvalue FROM *PREFIX*preferences WHERE appid = ? AND configkey = ?";
+				$args = array('chooser', 'ssl_certificate_subject_'.$i);
+				
+			}
+			else{
+				$sql = "SELECT userid, configvalue FROM *PREFIX*preferences WHERE userid=? AND appid = ? AND configkey = ?";
+				$args = array($user, 'chooser', 'ssl_certificate_subject_'.$i);
+			}
+			$query = \OCP\DB::prepare($sql);
+			$output = $query->execute($args);
+			$j = 0;
+			$checkDNArr = \OCA\FilesSharding\Lib::tokenizeDN($subject);
+			while($row=$output->fetchRow()){
+				if(!empty($row['configvalue'])){
+					$configDNArr = \OCA\FilesSharding\Lib::tokenizeDN($row['configvalue']);
+					if($configDNArr==$checkDNArr){
+						if($j>0 && $user != $row['userid']){
+							OC_Log::write('chooser',"ERROR: subject ".$subject." registered by more than one user:".
+									$user. " <-> ".$row['userid'], OC_Log::ERROR);
+							return "";
+						}
+						$user = $row['userid'];
+						++$j;
+					}
+				}
+			}
+			++$i;
+		}
+		return $user;
+	}
+	
 	public static function getDeviceToken($user, $deviceName){
 		$sql = "SELECT configkey, configvalue FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey = ?";
 		$args = array($user, 'chooser', 'device_token_'.$deviceName);
@@ -577,6 +616,33 @@ END;
 				self::checkUserVlan($_SERVER['REMOTE_ADDR']))){
 			\OC::$CLI = true;
 		}
+	}
+	
+	public static function checkCertRelay($hostDn){
+		if(empty($hostDn)){
+			return "";
+		}
+		$headerDN = trim($_SERVER['HTTP_'.self::$dn_header]);
+		if(empty($headerDN)){
+			return "";
+		}
+		if(self::$trusted_dn_header_host_dns==null){
+			self::$trusted_dn_header_host_dns = \OCP\Config::getSystemValue('trusted_dn_header_host_dns', '');
+			self::$dnHeaderHostDNs = array_map('trim', explode(",", self::$trusted_dn_header_host_dns));
+		}
+		if(self::$dn_header==null){
+			self::$dn_header = \OCP\Config::getSystemValue('dn_header', '');
+		}
+		if(empty(self::$dn_header) || empty(self::$trusted_dn_header_host_dns)){
+			return "";
+		}
+		$hostDNTokens = \OCA\FilesSharding\Lib::tokenizeDN($hostDn);
+		foreach(self::$dnHeaderHostDNs as $dn){
+			if(\OCA\FilesSharding\Lib::tokenizeDN($dn) == $hostDNTokens){
+				return $headerDN;
+			}
+		}
+		return "";
 	}
 
 }

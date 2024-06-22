@@ -63,8 +63,7 @@ class X509 extends AbstractBasic {
 	}
 	
 	public static function checkCert(){
-		if(empty($_SERVER['PHP_AUTH_USER']) ||
-			empty($_SERVER['SSL_CLIENT_VERIFY']) ||
+		if(/*empty($_SERVER['PHP_AUTH_USER']) ||*/ empty($_SERVER['SSL_CLIENT_VERIFY']) ||
 			$_SERVER['SSL_CLIENT_VERIFY']!='SUCCESS' && $_SERVER['SSL_CLIENT_VERIFY']!='NONE'){
 			return "";
 		}
@@ -81,26 +80,22 @@ class X509 extends AbstractBasic {
 				$_SERVER['REDIRECT_SSL_CLIENT_S_DN'], \OC_Log::WARN);
 		// Check admin access
 		if(!empty($user) && \OC_User::userExists($user) && \OCP\App::isEnabled('files_sharding')){
-			if(\OCA\FilesSharding\Lib::checkCert()){
+			if(\OCA\FilesSharding\Lib::checkAdminCert()){
 				return $user;
 			}
 		}
-		// Check that client DN starts with the issuer DN - very rough spoofing protection
-		$issuerCheckStr = preg_replace('|CN=[^,]*,|', '', $issuerDN);
-		if(strpos($clientDN, $issuerCheckStr)==false){
-			return "";
-		}
-		$clientDNArr = explode(',', $clientDN);
-		$clientDNwSlashes = '/'.implode('/', array_reverse($clientDNArr));
-		$index = 0;
-		while($index<\OC_Chooser::$MAX_CERTS){
-			$subject = \OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
-			\OC_Log::write('chooser','Checking subject '.$subject.'<->'.$clientDNwSlashes, \OC_Log::WARN);
-			if(!empty($subject) && $subject===$clientDNwSlashes){
-				\OC_Log::write('chooser','Subject OK', \OC_Log::WARN);
-				return $user;
+		// Check if the request is from a host trusted to relay DN in header.
+		// If so, and if the DN header is set, set $clientDN with this instead.
+		if(!empty($clientDN) && \OCP\App::isEnabled('files_sharding')){
+			$dnHeaderDN = \OC_Chooser::checkCertRelay($clientDN);
+			if(!empty($dnHeaderDN)){
+				$clientDN = $dnHeaderDN;
 			}
-			++$index;
+		}
+		// Check the client subject
+		$user = \OC_Chooser::getUserFromSubject($clientDN, $user);
+		if(!empty($user)){
+			return $user;
 		}
 		return "";
 	}
