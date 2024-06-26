@@ -31,6 +31,7 @@ class X509 extends AbstractBasic {
 		}
 		$user_id = self::checkCert();
 		if($user_id != '' && \OC_User::userExists($user_id)){
+			\OC_Log::write('chooser',"Got user_id ".$user_id, \OC_Log::WARN);
 			$this->currentUser = $user_id;
 			\OC_User::setUserId($user_id);
 			\OC_Util::setUpFS($user_id);
@@ -52,6 +53,7 @@ class X509 extends AbstractBasic {
 		}
 		$user_id = self::checkCert();
 		if($user_id != '' && \OC_User::userExists($user_id)){
+			\OC_Log::write('chooser',"Got user ".$user_id. ":".$_SERVER['PHP_AUTH_USER'], \OC_Log::WARN);
 			$this->currentUser = $user_id;
 			\OC_User::setUserId($user_id);
 			\OC_Util::setUpFS($user_id);

@@ -11,7 +11,7 @@ class OC_Chooser {
 	private static $IPS_CACHE_KEY = 'compute_ips';
 	private static $STORAGE_TOKEN_DEVICE_NAME = 'storage';
 	private static $trusted_dn_header_host_dns = null;
-	private static $dn_header = null;
+	public static $dn_header = null;
 	private static $dnHeaderHostDNs = [];
 	
 	public static $MAX_CERTS = 10;
@@ -443,9 +443,11 @@ END;
 		return $expires;
 	}
 	
-	public static function getUserFromSubject($subject, $user=""){
-		$user = "";
+	public static function getUserFromSubject($subject, $user_=""){
+		OC_Log::write('chooser',"Looking for certificate with subject ".$subject." for user ".
+				$user_, OC_Log::WARN);
 		$i = 0;
+		$user = $user_;
 		while($i<self::$MAX_CERTS){
 			if(empty($user)){
 				$sql = "SELECT userid, configvalue FROM *PREFIX*preferences WHERE appid = ? AND configkey = ?";
@@ -470,6 +472,7 @@ END;
 							return "";
 						}
 						$user = $row['userid'];
+						OC_Log::write('chooser',"Cert: ".$row['configvalue'].":".$row['userid']." <-> ".$subject, OC_Log::WARN);
 						++$j;
 					}
 				}
@@ -622,20 +625,21 @@ END;
 		if(empty($hostDn)){
 			return "";
 		}
-		$headerDN = trim($_SERVER['HTTP_'.self::$dn_header]);
-		if(empty($headerDN)){
-			return "";
+		if(self::$dn_header==null){
+			self::$dn_header = \OCP\Config::getSystemValue('dn_header', '');
 		}
 		if(self::$trusted_dn_header_host_dns==null){
 			self::$trusted_dn_header_host_dns = \OCP\Config::getSystemValue('trusted_dn_header_host_dns', '');
-			self::$dnHeaderHostDNs = array_map('trim', explode(",", self::$trusted_dn_header_host_dns));
-		}
-		if(self::$dn_header==null){
-			self::$dn_header = \OCP\Config::getSystemValue('dn_header', '');
 		}
 		if(empty(self::$dn_header) || empty(self::$trusted_dn_header_host_dns)){
 			return "";
 		}
+		$headers = apache_request_headers();
+		$headerDN = trim($headers[self::$dn_header]);
+		if(empty($headerDN)){
+			return "";
+		}
+		self::$dnHeaderHostDNs = array_map('trim', explode(",", self::$trusted_dn_header_host_dns));
 		$hostDNTokens = \OCA\FilesSharding\Lib::tokenizeDN($hostDn);
 		foreach(self::$dnHeaderHostDNs as $dn){
 			if(\OCA\FilesSharding\Lib::tokenizeDN($dn) == $hostDNTokens){

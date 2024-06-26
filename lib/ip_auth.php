@@ -31,6 +31,14 @@ class IP extends AbstractBasic {
 			\OC_Log::write('chooser','user_id '.$_SERVER['PHP_AUTH_USER'],\OC_Log::INFO);
 			return false;
 		}
+		$headers = apache_request_headers();
+		if(\OC_Chooser::$dn_header==null){
+			\OC_Chooser::$dn_header = \OCP\Config::getSystemValue('dn_header', '');
+		}
+		$headerDN = trim($headers[\OC_Chooser::$dn_header]);
+		if(!empty($headerDN) /*If SSL-CLIENT-DN is provided, x509_auth should be used*/){
+			return false;
+		}
 		$user_id = \OC_Chooser::checkIP();
 		if($user_id != '' && \OC_User::userExists($user_id)){
 			if(!empty($_SERVER['PHP_AUTH_USER']) && $user_id != $_SERVER['PHP_AUTH_USER']){
@@ -55,11 +63,20 @@ class IP extends AbstractBasic {
 			\OC_Log::write('chooser','user_id '.$_SERVER['PHP_AUTH_USER'],\OC_Log::INFO);
 			return false;
 		}
+		$headers = apache_request_headers();
+		if(\OC_Chooser::$dn_header==null){
+			\OC_Chooser::$dn_header = \OCP\Config::getSystemValue('dn_header', '');
+		}
+		$headerDN = trim($headers[\OC_Chooser::$dn_header]);
+		if(!empty($headerDN) /*If SSL-CLIENT-DN is provided, x509_auth should be used*/){
+			return false;
+		}
 		$user_id = \OC_Chooser::checkIP();
 		\OC_Log::write('chooser','user_id NOW '.$user_id.' : '.$_SERVER['PHP_AUTH_USER'],\OC_Log::INFO);
 		/*if($user_id == '' || !\OC_User::userExists($user_id)){
 			throw new \Sabre\DAV\Exception\NotAuthenticated('Not a valid IP address / userid, ' . $user_id);
 		}*/
+
 		if($user_id != '' && \OC_User::userExists($user_id)){
 			if(!empty($_SERVER['PHP_AUTH_USER']) && $user_id != $_SERVER['PHP_AUTH_USER']){
 				throw new \Sabre\DAV\Exception\NotAuthenticated('Username or password does not match');
