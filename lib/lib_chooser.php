@@ -327,7 +327,7 @@ END;
 	}
 
 	public static function removeCert($user, $subject="") {
-		if(empty($subject)){
+		if(!empty($subject)){
 			$sql = "delete FROM *PREFIX*preferences WHERE userid = ? AND appid = ? AND configkey LIKE ? AND configvalue = ?";
 			$args = array($user, 'chooser', 'ssl_certificate_subject_%', $subject);
 		}
