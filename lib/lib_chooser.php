@@ -228,12 +228,20 @@ class OC_Chooser {
 	}
 
 	private static function getCipher() {
-		if (!class_exists('Crypt_AES', false)) {
-			include('Crypt/AES.php');
+		// New, php-7, version of phpseclib
+		if(is_dir(OC::$SERVERROOT."/3rdparty/phpseclib/phpseclib/phpseclib/Common")){
+			include_once('Crypt/AES.php');
+			$cipher = new phpseclib3\Crypt\AES('cbc');
+			// Our salt is 30 chars - not supported by newer library versions, pad to 32 chars
+			$cipher->setKey(\OCP\Config::getSystemValue('passwordsalt')."\0\0");
+			return $cipher;
 		}
-		$cipher = new Crypt_AES(CRYPT_AES_MODE_CBC);
-		$cipher->setKey(\OCP\Config::getSystemValue('passwordsalt'));
-		return $cipher;
+		else{
+			include_once('Crypt/AES.php');
+			$cipher = new Crypt_AES(CRYPT_AES_MODE_CBC);
+			$cipher->setKey(\OCP\Config::getSystemValue('passwordsalt'));
+			return $cipher;
+		}
 	}
 
 	/* $value: 'yes' and 'no'*/
