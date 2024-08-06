@@ -116,7 +116,7 @@ class OC_Chooser {
 				// pod_name|container_name|image_name|pod_ip|node_ip|owner|age(s)|status|ssh_port|ssh_username|https_port|uri
 				$ip = trim($entries[3]);
 				$owner = trim($entries[5]);
-				OC_Log::write('chooser', 'IP '.$_SERVER['REMOTE_ADDR'].' : '.$ip.' : '.$owner, OC_Log::INFO);
+				OC_Log::write('chooser', 'IP '.$_SERVER['REMOTE_ADDR'].' : '.$ip.' : '.$owner.' : '.$my_private_ip, OC_Log::INFO);
 				// Request from user container or vm for /files/ or other php-served URL
 				if(!empty($ip) && !empty($owner) && !empty($_SERVER['REMOTE_ADDR']) && $_SERVER['REMOTE_ADDR']==$ip){
 					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
@@ -132,9 +132,14 @@ class OC_Chooser {
 				}
 				// Request from localhost to verify request from user container for
 				// /storage/ - served by Apache
-				if(!empty($_SERVER['REMOTE_ADDR']) && ($_SERVER['REMOTE_ADDR']=="localhost" || $_SERVER['REMOTE_ADDR']=="127.0.0.1") &&
+				$my_internal_url = \OCA\FilesSharding\Lib::getServerForUser($owner, true);
+				$my_private_url = \OCA\FilesSharding\Lib::internalToPrivate($my_internal_url);
+				$parse = parse_url($my_private_url);
+				$my_private_ip = $parse['host'];
+				if(!empty($_SERVER['REMOTE_ADDR']) && ($_SERVER['REMOTE_ADDR']=="localhost" ||
+						$_SERVER['REMOTE_ADDR']=="127.0.0.1" || $_SERVER['REMOTE_ADDR']==$my_private_ip) &&
 						!empty($ip) && !empty($owner) && !empty($_SERVER['HTTP_IP']) && $_SERVER['HTTP_IP']==$ip){
-					OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
+							OC_Log::write('chooser', 'CHECK IP: '.$ip.":".$owner, OC_Log::INFO);
 					if(!empty($_SERVER['PHP_AUTH_USER']) && $owner == self::$vlantrusteduser){
 						$user_id = $_SERVER['PHP_AUTH_USER'];
 					}
