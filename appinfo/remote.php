@@ -44,6 +44,8 @@ OC_App::loadApps(array('filesystem','authentication'));
 
 OCP\App::checkAppEnabled('chooser');
 
+session_write_close();
+
 // This may be a browser accessing a webdav URL - and the browser may already be logged in
 $loggedInUser = \OCP\USER::getUser();
 
