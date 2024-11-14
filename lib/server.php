@@ -65,7 +65,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 			
 			if ($this->broadcastEvent('unknownMethod',array($method, $uri))) {
 				// Unsupported method
-				throw new Exception\NotImplemented('There was no handler found for this "' . $method . '" method');
+				throw new \Sabre\DAV\Exception\NotImplemented('There was no handler found for this "' . $method . '" method');
 			}
 			
 		}
