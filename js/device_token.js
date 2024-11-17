@@ -98,7 +98,8 @@ $(document).ready(function() {
 				var url =OC.webroot+"/apps/chooser/login.php?server="+server+"&user="+user+"&password="+password;
 				$('#done_link').attr("href", url);
 				$('#done_link').show();
-				window.location = url;
+				// Don't think redirecting to nc: is necessary on Android any longer...(?)
+				//window.location = url;
 				//document.location.replace(url);
 				//window.open(url, '_system');
 				//sendObjectMessage(url);

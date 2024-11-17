@@ -378,6 +378,7 @@ END;
 		$ca_cert  = \OC_Config::getValue('my_ca_certificate', '');
 		$ca_key  = \OC_Config::getValue('my_ca_privatekey', '');
 		// Generate encrypted key and cert request in user_id/chooser/ssl/
+		// FO: Switched from rsa:4096 to rsa:2048 to be able to use the key to send to Nexcloud iOS client (redundant answer to push setup request - to avoid error messages)
 		$reqStr = "openssl req -new -out \"$certDir/userreq.pem\" -newkey rsa:4096 -keyout \"$certDir/userkey.pem\" -subj \"/CN=$user/O=sciencedata.dk\" -passout pass:$secret";
 		OC_Log::write('chooser',"Generating certificate request with: ".$reqStr, OC_Log::WARN);
 		exec($reqStr, $output, $ret);
@@ -421,6 +422,29 @@ END;
 			exec($keyStr, $output, $ret);
 		}
 		return implode("\n", $output);
+	}
+
+	public static function getDeviceIDAndSignature($user){
+		$device_id = \OC::$session->get('DEVICE_ID');
+		if(empty($device_id)){
+			OC_Log::write('chooser',"No device ID", OC_Log::WARN);
+		}
+		$certDir = self::getAppDir($user)."ssl";
+		if(!file_exists("$certDir/usercert.pem")){
+			self::generateUserCert($user);
+		}
+		$device_id_signature = "";
+		$instanceid = \OC_Config::getValue('instanceid', null);
+		$request_token = $_COOKIE[$instanceid];
+		OC_Log::write('chooser',"TOKEN: ".$request_token, OC_Log::WARN);
+		$secret  = \OC_Config::getValue('secret', 'secret');
+		$private_key = openssl_pkey_get_private("file://".self::getAppDir($user)."ssl/userkey.pem", $secret);
+		$json_enc_device_id = json_encode([$user, $request_token]);
+		openssl_sign($json_enc_device_id, $device_id_signature, $private_key, OPENSSL_ALGO_SHA512);
+		$base64_enc_device_id = base64_encode(hash('sha512', $json_enc_device_id, true));
+		$publicKey = openssl_pkey_get_public(self::getSDCert($user));
+		$keyData = openssl_pkey_get_details($publicKey);		
+		return ['public_key'=>$keyData['key'], 'device_id'=>$device_id, 'enc'=>$base64_enc_device_id, 'sign'=>base64_encode($device_id_signature)];
 	}
 	
 	public static function getSDPKCS12($user) {
@@ -617,7 +641,7 @@ END;
 				"login"=>$actual_host.
 				"?redirect_url=".urlencode(OC::$WEBROOT."/apps/chooser/login.php?".
 				(empty($extraRoot)?"":"extraroot=".$extraRoot."&")."token=".$token),
-				"poll"=>array("token"=>$token, "endpoint"=>$actual_link));
+				"poll"=>array("token"=>$token, "endpoint"=>$actual_link."/poll"));
 		return $values;
 	}
 	

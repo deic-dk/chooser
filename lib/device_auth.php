@@ -60,12 +60,16 @@ class Device extends AbstractBasic {
 				\OC::$session->set('LAST_ACTIVITY', time());
 				\OC_User::handleApacheAuth();
 			}
+			// This is not used. The idea was to use it with iOS push, but apparently device id is something else in that context.
+			if(!empty($device_name)){
+				\OC::$session->set('DEVICE_ID', preg_replace('|^device_token_|', '', $device_name));
+			}
 			$this->currentUser = $user_id;
 			\OC_User::setUserId($user_id);
 			\OC_Util::setUpFS($user_id);
 			\OCP\Util::writeLog('chooser', 'Validated password '.\OC_User::isLoggedIn().
 					' : '.$device_name.'=>'.$storedHash .' for '.$username.' : '.
-					$_SERVER['REQUEST_URI'], \OC_Log::INFO);
+					$_SERVER['REQUEST_URI'].' : '.\OC::$session->get('DEVICE_ID'), \OC_Log::INFO);
 			return true;
 		}
 		else{

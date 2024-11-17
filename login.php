@@ -20,26 +20,28 @@ try {
 	$now = $nowDate->getTimestamp();
 	
 	// Polling
-	if(!empty($_POST['token'])){
-		$user = \OC_Chooser::validateToken($_POST['token']);
+	if($_SERVER['REQUEST_METHOD']==='POST' && !empty($_REQUEST['token']) &&
+			preg_match('|.*/poll$|', strtok($_SERVER["REQUEST_URI"], '?'))){
+		$user = \OC_Chooser::validateToken($_REQUEST['token']);
 		\OCP\Util::writeLog('status', 'Checking for poll...'.$user, \OC_Log::WARN);
 		if(!empty($user) && $user!='guest'){
-			\OC_Chooser::deleteToken($_POST['token']);
+			\OC_Chooser::deleteToken($_REQUEST['token']);
 			/*$server = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http").
 				"://".$_SERVER[HTTP_HOST].OC::$WEBROOT.$extraRoot;*/
 			$server = \OCA\FilesSharding\Lib::getServerForUser($user);
 			$values=array(
 				"server"=>rtrim($server, "/")."/".(empty($extraRoot)?"":$extraRoot),
 				"loginName"=>$user,
-				"appPassword"=>$_POST['token']
+				"appPassword"=>$_REQUEST['token']
 			);
 			header("Access-Control-Allow-Origin: *");
 			header("Content-Type: application/json");
+			header('HTTP/1.0 200 OK');
 			echo json_encode($values, JSON_UNESCAPED_SLASHES);
 			exit();
 		}
 		else{
-			header('HTTP/1.0 401 Unauthorized');
+			header('HTTP/1.0 404 Not Found');
 			exit();
 		}
 	}
@@ -57,7 +59,7 @@ try {
 			\OC_Chooser::setToken($user, 'token_'.$token.'_'.$now, $token);
 			\OC_Chooser::setDeviceToken($user, $deviceName, $token);
 			OC_Log::write('chooser', 'Token ok: '.$user.':'.$deviceName.':'.$token, OC_Log::WARN);
-			$ret['message'] = "Device added with token ".$token;
+			$ret['message'] = "Device '.$deviceName'. added";
 			OCP\JSON::encodedPrint($ret, JSON_UNESCAPED_SLASHES);
 		}
 		else{

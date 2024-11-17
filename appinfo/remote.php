@@ -421,6 +421,8 @@ if(\OCP\App::isEnabled('files_sharding') &&
 
 session_write_close();
 
+\OCP\Util::writeLog('chooser','Serving '.$user.' : '.$_SERVER['REQUEST_URI'].'. Headers: '.serialize(apache_request_headers()), \OCP\Util::INFO);
+
 // And off we go!
 if($ok){
 	// Make sure we don't set a session cookie when serving a shared directory/file.

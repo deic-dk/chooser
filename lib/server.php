@@ -390,6 +390,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/group',
 					'<d:href>'.OC::$WEBROOT.'/remote.php/group/remote.php/webdav', $data);
 		}
+		OC_Log::write('chooser','SENDING DATA: '.$_SERVER['HTTP_USER_AGENT'].':'.$user.':'.$uri.'-->'.$data, OC_Log::INFO);
 		$this->httpResponse->sendBody($data);
 
 	}
@@ -739,18 +740,18 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 					$newProperties['href'] .='/';
 				}
 			}
-			
+
 			if($this->mediaSearch){
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
 				$newProperties[200][$manualProp] = \OCA\FilesSharding\Lib::getFileId($path);
 				unset($newProperties[404][$manualProp]);
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}size';
 				$newProperties[200][$manualProp] =
-					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
+				$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
 				unset($newProperties[404][$manualProp]);
 				$manualProp = '{DAV:}getcontentlength';
 				$newProperties[200][$manualProp] =
-					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
+				$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
 				unset($newProperties[404][$manualProp]);
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite';
 				$newProperties[200][$manualProp] = '0';
@@ -792,10 +793,10 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				unset($newProperties[404][$manualProp]);
 				$manualProp = '{DAV:}getcontentlength';
 				$newProperties[200][$manualProp] =
-					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;$newProperties[200]['{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite'] = '0';
+					$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
 				unset($newProperties[404][$manualProp]);
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite';
-				$newProperties[200][$manualProp] = '1';
+				$newProperties[200][$manualProp] = $this->favoriteSearch?'1':'0';
 				unset($newProperties[404][$manualProp]);
 				$manualProp = '{' . self::NS_NEXTCLOUD . '}is-encrypted';
 				$newProperties[200][$manualProp] = '0';
@@ -805,6 +806,11 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 					$newProperties[200][$manualProp] = $node->getOcFileId();
 					unset($newProperties[404][$manualProp]);
 				}
+			}
+			else{
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
+				$newProperties[200][$manualProp] = \OCA\FilesSharding\Lib::getFileId($myPath);
+				unset($newProperties[404][$manualProp]);
 			}
 
 			// If the resourcetype property was manually added to the requested property list,
