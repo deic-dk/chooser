@@ -5,6 +5,8 @@ $l = OC_L10N::get('chooser');
 
 <fieldset class="section">
 	<h2><?php p($l->t('Data processing')); ?></h2>
+
+	<br />
 	
 	<?php p($l->t('Allow internal HTTP access from your own pods')); ?>
 	<input type="checkbox" id="allow_internal_dav" value="0"
@@ -45,14 +47,18 @@ $l = OC_L10N::get('chooser');
 	<label id="chooser_dn_submit" class="button"><?php p($l->t("Add"));?></label>
 
 	<br />
+	<br />
 	
-	<b>Accepted DNs</b>:<br />
+	<b>Accepted DNs</b>
+	<br />
+	<br />
+
 	<div id="chooser_active_dns">
 	<?php
 	foreach($_['ssl_active_dns'] as $dn){
 	?>
-		<div class="chooser_active_dn">
-			<label class="text"><?php echo($dn);?></label>
+		<div class="chooser_active_dn nowrap remove_element">
+			<span><label class="text"><?php echo($dn);?></label></span>
 			<label class="chooser_dn_deactivate btn btn-flat" dn="<?php echo($dn);?>" title="<?php p($l->t('Remove'));?>">-</label>
 		</div>
 	<?php } ?>
@@ -61,3 +67,22 @@ $l = OC_L10N::get('chooser');
 	<label id="chooser_msg"></label>
 </fieldset>
 
+<fieldset class="section">
+	<h2><?php echo $l->t('Device tokens');?></h2>
+	<?php p($l->t("You have stored tokens for the devices listed below.")); ?>
+	<?php p($l->t("If a device is lost or compromised, you should delete the corresponding token.")); ?>
+	<br />
+	<br />
+	<div id="device_tokens">
+	<?php
+	$device_tokens = \OC_Chooser::getDeviceTokens(\OCP\USER::getUser(), true);
+	foreach($device_tokens as $device_name=>$storedHash){
+		$short_name = preg_replace('|^device_token_|', '', $device_name);
+		echo "<div class='nowrap remove_element' device_name='$short_name'>
+						<span class='device_name'><label>$short_name</label></span>
+						<label title='Delete this token' device_name='$short_name' class='remove_device_token btn btn-flat'>-</label>
+					</div>";
+	}
+	?>
+	</div>
+</fieldset>

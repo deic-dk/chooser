@@ -9,7 +9,7 @@ class OC_Chooser {
 	private static $vlantrusteduser = null;
 	private static $IPS_TTL_SECONDS = 30;
 	private static $IPS_CACHE_KEY = 'compute_ips';
-	private static $STORAGE_TOKEN_DEVICE_NAME = 'storage';
+	public static $STORAGE_TOKEN_DEVICE_NAME = 'storage_device';
 	private static $trusted_dn_header_host_dns = null;
 	public static $dn_header = null;
 	private static $dnHeaderHostDNs = [];
@@ -573,9 +573,6 @@ END;
 	}
 	
 	public static function setDeviceToken($user, $deviceName, $token){
-		if($deviceName==self::$STORAGE_TOKEN_DEVICE_NAME){
-			$deviceName = $deviceName.'_device';
-		}
 		$forcePortable = (CRYPT_BLOWFISH != 1);
 		$hasher = new \PasswordHash(8, $forcePortable);
 		$hash = $hasher->HashPassword($token . \OC_Config::getValue('passwordsalt', ''));
