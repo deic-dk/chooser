@@ -337,6 +337,13 @@ END;
 		if($index<0){
 			return false;
 		}
+		$subject = trim($subject);
+		$dns = self::getActiveDNs($user);
+		foreach($dns as $dn){
+			if($dn==$subject){
+				return false;
+			}
+		}
 		return \OCP\Config::setUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index, $subject);
 	}
 
