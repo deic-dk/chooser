@@ -46,7 +46,8 @@ class OC_Connector_Sabre_Sharingout_Directory extends OC_Connector_Sabre_Node
 		if ($info['mimetype'] == 'httpd/unix-directory') {
 			\OC_Log::write('chooser','Returning OC_Connector_Sabre_Directory '.$name.':'.$info['fileid'], \OC_Log::WARN);
 			$node = new OC_Connector_Sabre_Directory($this->fileView, $info);
-		} else {
+		}
+		else {
 			\OC_Log::write('chooser','Returning OC_Connector_Sabre_File '.$name.':'.$info['fileid'], \OC_Log::WARN);
 			$node = new OC_Connector_Sabre_File($this->fileView, $info);
 		}
@@ -80,6 +81,7 @@ class OC_Connector_Sabre_Sharingout_Directory extends OC_Connector_Sabre_Node
 			}
 			else{
 				if($this->path!=$share['uid_owner']){
+					\OC_Log::write('chooser','Not in scope '.$this->path.' : '.$share['uid_owner'], \OC_Log::WARN);
 					continue;
 				}
 				\OC_Log::write('chooser','Getting info for '.session_status().', '.serialize($share), \OC_Log::WARN);
@@ -93,10 +95,10 @@ class OC_Connector_Sabre_Sharingout_Directory extends OC_Connector_Sabre_Node
 				}
 				$info = \OCA\FilesSharding\Lib::getFileInfo($path, $share['uid_owner'], $share['item_source'], '',
 						$user, $group);
-				\OC_Log::write('chooser','Got info, '.$user.':'.$info['fileid'], \OC_Log::WARN);
+				\OC_Log::write('chooser','Got info, '.$user.':'.$path.':'.'/'.$info['name'].':'.$info['fileid'], \OC_Log::WARN);
 				\OC\Files\Filesystem::init($share['uid_owner'],
 						!empty($group)?'/'.$share['uid_owner'].'/user_group_admin/'.$group:'/'.$share['uid_owner'].'/files');
-				$node = $this->getChild($this->path.'/'.$info->getName(), $info);
+				$node = $this->getChild($this->path.'/'.$info['name'], $info);
 			}
 			$nodes[] = $node;
 		}

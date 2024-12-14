@@ -170,6 +170,11 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 	}
 	
 	protected function httpProppatch($uri) {
+		/*
+		
+		curl -u test2:some_password -X PROPFIND --data-binary '<?xml version="1.0" ?><d:propfind xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns"><d:prop><d:resourcetype /><d:getlastmodified /><d:getcontentlength /><d:getetag /><oc:size /><oc:id /><oc:fileid /><oc:downloadURL /><oc:dDC /><oc:permissions /><oc:checksums /><is-encrypted xmlns="http://nextcloud.org/ns" /><oc:share-types /><is-mount-root xmlns="http://nextcloud.org/ns" /></d:prop></d:propfind>' https://silo2.sciencedata.dk/sharingin/remote.php/dav/files/test2
+		
+		*/
 		$xml = $this->httpRequest->getBody(true);
 		OC_Log::write('chooser','Proppatch XML: '.$xml, OC_Log::WARN);
 		$newProperties = $this->parsePropPatchRequest($xml);
@@ -512,6 +517,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			$children = $this->tree->getChildren($path);
 			foreach($children as $childNode){
 				OC_Log::write('chooser','node: '.$path.":".$depth.":".$childNode->getName().":".
+						$childNode->getFileId().":".get_class($childNode).":".get_class($parentNode).':'.
 						(empty($this->tree->sharingIn)?'':$this->tree->sharingIn), OC_Log::INFO);
 				if($this->excludePath($path . '/' . $childNode->getName())){
 					continue;
@@ -808,9 +814,39 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				}
 			}
 			else{
-				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
-				$newProperties[200][$manualProp] = \OCA\FilesSharding\Lib::getFileId($myPath);
-				unset($newProperties[404][$manualProp]);
+				if($node instanceof \OC_Connector_Sabre_Sharingin_Directory || $node instanceof \OC_Connector_Sabre_Sharingout_Directory){
+					// We're in top-level /sharingin/
+							$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
+							// This will return a non-integer, but unique fileid
+							$newProperties[200][$manualProp] = $node->getFileId();
+							unset($newProperties[404][$manualProp]);
+				}
+				elseif(!empty($this->tree->sharingIn) && $this->tree->sharingIn){
+					// When $myPath is /user_id/shared_folder and we're in /sharingin,
+					// we cannot get the fileid of the shared_folder, so we generate a unique one,
+					// based on the the path
+					$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
+					$newProperties[200][$manualProp] = substr(md5($myPath), 0, 21);
+					unset($newProperties[404][$manualProp]);
+				}
+				elseif(!empty($this->tree->sharingOut) && $this->tree->sharingOut){
+					// When $myPath is /user_id/shared_folder and we're in /sharingout,
+					// we _can_ get the fileid of the shared_folder.
+					// Again, a non-integer, but unique fileid
+					$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
+					/*$myNode = $this->tree->getNodeForPath($myPath);
+					\OC_Log::write('chooser','Getting fileid for '.$myPath.':'.$path.':'.get_class($myNode).':'.
+							':'.$myNode->getFileId().':'.$myNode->getName(), \OC_Log::WARN);
+					$newProperties[200][$manualProp] = $myNode->getFileId();*/
+					$newProperties[200][$manualProp] = $node->getFileId();
+					unset($newProperties[404][$manualProp]);
+				}
+				else{
+						// this is the standard case
+						$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
+						$newProperties[200][$manualProp] = \OCA\FilesSharding\Lib::getFileId($myPath);
+						unset($newProperties[404][$manualProp]);
+				}
 			}
 
 			// If the resourcetype property was manually added to the requested property list,

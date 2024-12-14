@@ -114,7 +114,7 @@ class OC_Connector_Sabre_Sharingin_Directory extends OC_Connector_Sabre_Node
 				$info = \OCA\FilesSharding\Lib::getFileInfo($path, $share['uid_owner'], $share['item_source'], '',
 						$user, $group);
 				\OC_Log::write('chooser','Got info, '.$info['fileid'].':'.$info['path'].':'.$info['permissions'], \OC_Log::WARN);
-				$node = $this->getChild($this->path.'/'.$info->getName(), $info);
+				$node = $this->getChild($this->path.'/'.$info['name'], $info);
 			}
 			$nodes[] = $node;
 		}
