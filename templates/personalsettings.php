@@ -4,7 +4,7 @@ $l = OC_L10N::get('chooser');
 ?>
 
 <fieldset class="section">
-	<h2><?php p($l->t('Data processing')); ?></h2>
+	<h2><?php p($l->t('Data access')); ?></h2>
 
 	<br />
 	
