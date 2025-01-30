@@ -392,8 +392,8 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 					'<d:href>'.OC::$WEBROOT.'/remote.php/usage/remote.php/webdav', $data);
 		}
 		if(!empty($this->tree->group) && $this->tree->group){
-			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/group',
-					'<d:href>'.OC::$WEBROOT.'/remote.php/group/remote.php/webdav', $data);
+			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/groupfolders',
+					'<d:href>'.OC::$WEBROOT.'/remote.php/groupfolders/remote.php/webdav', $data);
 		}
 		OC_Log::write('chooser','SENDING DATA: '.$_SERVER['HTTP_USER_AGENT'].':'.$user.':'.$uri.'-->'.$data, OC_Log::INFO);
 		$this->httpResponse->sendBody($data);

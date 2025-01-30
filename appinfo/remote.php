@@ -172,19 +172,19 @@ elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingout/")===0){
 	}
 	$objectTree->sharingOut = true;
 }
-elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/group/")===0){
-	$group = preg_replace("|^".OC::$WEBROOT."/group/|", "", $_SERVER['REQUEST_URI']);
+elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/groupfolders/")===0){
+	$group = preg_replace("|^".OC::$WEBROOT."/groupfolders/|", "", $_SERVER['REQUEST_URI']);
 	$group = preg_replace("|/.*$|", "", $group);
 	// Ignored as empty($_SERVER['BASE_URI'] is set by user_group_admin
-	$baseuri = OC::$WEBROOT."/group/";
+	$baseuri = OC::$WEBROOT."/groupfolders/";
 	$_SERVER['BASE_DIR'] = '/'.$user.'/user_group_admin/';
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/remote.php/dav/files/".
-		$user."/@@/group/")===0){
+		$user."/@@/groupfolders/")===0){
 	$group = preg_replace("|^".OC::$WEBROOT."/remote.php/dav/files/".
-			$user."/\@\@/group/|", "", $_SERVER['REQUEST_URI']);
+			$user."/\@\@/groupfolders/|", "", $_SERVER['REQUEST_URI']);
 	$group = preg_replace("|/.*$|", "", $group);
-	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user."/@@/group/".$group;
+	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user."/@@/groupfolders/".$group;
 	$_SERVER['BASE_DIR'] = '/'.$user.'/user_group_admin/'.$group;
 	$favoriteLink = true;
 }
@@ -297,11 +297,11 @@ if(!empty($_SERVER['BASE_URI'])){
 		}
 		$userServerAccess = \OCA\FilesSharding\Lib::$USER_ACCESS_READ_ONLY;
 	}
-	if($_SERVER['BASE_URI']==OC::$WEBROOT."/remote.php/group"){
-		if(strpos(rtrim($_SERVER['REQUEST_URI'],'/'), OC::$WEBROOT."/remote.php/group/remote.php/webdav")===0){
+	if($_SERVER['BASE_URI']==OC::$WEBROOT."/remote.php/groupfolders"){
+		if(strpos(rtrim($_SERVER['REQUEST_URI'],'/'), OC::$WEBROOT."/remote.php/groupfolders/remote.php/webdav")===0){
 			$objectTree->group = true;
-			$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/remote.php/group/remote.php/webdav|",
-					OC::$WEBROOT."/remote.php/group", $_SERVER['REQUEST_URI']);
+			$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/remote.php/groupfolders/remote.php/webdav|",
+					OC::$WEBROOT."/remote.php/groupfolders", $_SERVER['REQUEST_URI']);
 		}
 		$userServerAccess = \OCA\FilesSharding\Lib::$USER_ACCESS_READ_ONLY;
 	}

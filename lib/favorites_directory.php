@@ -95,7 +95,7 @@ class OC_Connector_Sabre_Favorites_Directory extends OC_Connector_Sabre_Node
 				continue;
 				//
 				$group = $query['group'];
-				$uri = '/@@/group/'.$group.$target['path'];
+				$uri = '/@@/groupfolders/'.$group.$target['path'];
 			}
 			else{
 				$uri = $target['path'];
