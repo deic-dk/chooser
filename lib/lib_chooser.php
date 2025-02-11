@@ -418,6 +418,17 @@ END;
 		return $cert;
 	}
 	
+	/**
+	 * Absolute/full path to SSL cert
+	 */
+	public static function getSDCertLocation($user) {
+		$certDir = self::getAppDir($user)."ssl";
+		if(file_exists("$certDir/usercert.pem")){
+			return "$certDir/usercert.pem";
+		}
+		return "";
+	}
+	
 	public static function getSDKey($user) {
 		$output = [];
 		$ret = "";
@@ -430,7 +441,20 @@ END;
 		}
 		return implode("\n", $output);
 	}
-
+	
+	/**
+	 * Decrypt and store SD SSL key.
+	 * @param String $user
+	 * @return Full path to key file
+	 */
+	public static function decryptSDKey($user) {
+		$data = self::getSDKey($user);
+		$certDir = self::getAppDir($user)."ssl";
+		$filename = "$certDir/userkey_unenc.pem";
+		file_put_contents($filename, $data);
+		return $filename;
+	}
+	
 	public static function getDeviceIDAndSignature($user){
 		$device_id = \OC::$session->get('DEVICE_ID');
 		if(empty($device_id)){
