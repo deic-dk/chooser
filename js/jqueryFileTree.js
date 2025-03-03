@@ -178,7 +178,7 @@ if(jQuery) (function($){
 						// Scroll to folder
 						if(o.file==''){
 							o.dialog.animate({
-								scrollTop: $(this).offset().top - o.dialog.offset().top
+								scrollTop: $(this).offset().top - (typeof o.dialog.offset()!=='undefined'?o.dialog.offset().top:0)
 							}, 2000);
 						}
 					}
