@@ -21,14 +21,14 @@ $l = OC_L10N::get('chooser');
 		placeholder="<?php p($l->t('Path'));?>" />
 	<label id="chooser_dav_path_submit" class="button"><?php p($l->t("Save"));?></label>
 
-	<br />
+	<p>&nbsp;</p>
 
 	<?php if(OC_App::isEnabled('files_external')){ p($l->t('Browse /storage in web interface')); ?>
 	<input type="checkbox" id="show_storage_nfs" value="0"
 		title="<?php p($l->t( 'Show the persistent storage for your pods/containers' )); ?>"
 		<?php if ($_['storage_enabled'] == 'yes'): ?> checked="checked" /><?php endif; }?>
 
-	<br />
+	<p>&nbsp;</p>
 
 	<?php p($l->t('Generate new personal X.509 certificate:').' '); ?>
 	<input type="text" id="ssl_days"
