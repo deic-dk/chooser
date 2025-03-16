@@ -511,6 +511,22 @@ END;
 		}
 		return $expires;
 	}
+
+	/**
+	 * Check if the user certificate exists and is valid for at least one more day
+	 * @param unknown $user
+	 * @return boolean
+	 */
+	public static function getSDCertIsValid($user) {
+		$output = "";
+		$ret = "";
+		$certDir = self::getAppDir($user)."ssl";
+		$ok = "";
+		if(file_exists("$certDir/usercert.pem")){
+			$ok = exec("openssl x509 -checkend 86400 -noout -in \"$certDir/usercert.pem\" && echo yes", $output, $ret);
+		}
+		return $ok=="yes";
+	}
 	
 	public static function getUserFromSubject($subject, $user_=""){
 		OC_Log::write('chooser',"Looking for certificate with subject ".$subject." for user ".
