@@ -429,12 +429,23 @@ END;
 		return "";
 	}
 	
+	public static function getSDCertSerial($user) {
+		$output = [];
+		$ret = "";
+		$certDir = self::getAppDir($user)."ssl";
+		if(file_exists("$certDir/usercert.pem")){
+			$cmd = "openssl x509 -in \"$certDir/usercert.pem\" -noout -serial | awk -F= '{print $2}'";
+			exec($cmd, $output, $ret);
+		}
+		return implode("\n", $output);
+	}
+	
 	public static function getSDKey($user) {
 		$output = [];
 		$ret = "";
 		$certDir = self::getAppDir($user)."ssl";
 		$secret  = \OC_Config::getValue('secret', 'secret');
-		$keyStr = "openssl rsa -in $certDir/userkey.pem -passin pass:".$secret;
+		$keyStr = "openssl rsa -in \"$certDir/userkey.pem\" -passin pass:".$secret;
 		OC_Log::write('chooser',"Executing ".$keyStr, OC_Log::WARN);
 		if(file_exists("$certDir/userkey.pem")){
 			exec($keyStr, $output, $ret);

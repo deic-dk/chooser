@@ -63,7 +63,7 @@ class X509 extends AbstractBasic {
 			return true;
 		}
 	}
-	
+
 	public static function checkCert(){
 		if(/*empty($_SERVER['PHP_AUTH_USER']) ||*/ empty($_SERVER['SSL_CLIENT_VERIFY']) ||
 			$_SERVER['SSL_CLIENT_VERIFY']!='SUCCESS' && $_SERVER['SSL_CLIENT_VERIFY']!='NONE'){
@@ -79,13 +79,26 @@ class X509 extends AbstractBasic {
 		}
 		\OC_Log::write('chooser','Checking cert '.$_SERVER['PHP_AUTH_USER'].':'.
 				$_SERVER['SSL_CLIENT_VERIFY'].':'.$_SERVER['REDIRECT_SSL_CLIENT_I_DN'].':'.
-				$_SERVER['REDIRECT_SSL_CLIENT_S_DN'], \OC_Log::WARN);
-		// Check admin access
+				$_SERVER['REDIRECT_SSL_CLIENT_S_DN'].':'.
+				$_SERVER['SSL_CLIENT_M_SERIAL'], \OC_Log::WARN);
+		// Check admin access - we don't need to check serial: ScienceData host certificates are trusted
 		if(!empty($user) && \OC_User::userExists($user) && \OCP\App::isEnabled('files_sharding')){
 			if(\OCA\FilesSharding\Lib::checkAdminCert()){
 				return $user;
 			}
 		}
+		// Check that the serial of the received certificate matches the one of the currently active one
+		// See https://cweiske.de/tagebuch/ssl-client-certificates.htm
+		$checkUser = \OC_Chooser::getUserFromSubject($clientDN, $user);
+		if(empty($checkUser)){
+			return "";
+		}
+		$checkSerial = \OC_Chooser::getSDCertSerial($checkUser);
+		if($_SERVER['SSL_CLIENT_M_SERIAL']!=$checkSerial){
+			\OC_Log::write('chooser','Certificate serials mismatch: for '.$checkUser.' : '.
+					$_SERVER['SSL_CLIENT_M_SERIAL'].' != '.$checkSerial, \OC_Log::ERROR);
+		}
+		
 		// Check if the request is from a host trusted to relay DN in header.
 		// If so, and if the DN header is set, set $clientDN with this instead.
 		if(!empty($clientDN) && \OCP\App::isEnabled('files_sharding')){
@@ -94,6 +107,7 @@ class X509 extends AbstractBasic {
 				$clientDN = $dnHeaderDN;
 			}
 		}
+
 		// Check the client subject
 		$user = \OC_Chooser::getUserFromSubject($clientDN, $user);
 		if(!empty($user)){

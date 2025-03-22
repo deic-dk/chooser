@@ -36,7 +36,10 @@ $user = \OCP\USER::getUser();
 require_once('apps/chooser/appinfo/apache_note_user.php');
 
 if($cert=OC_Chooser::getSDCert($user)){
-	OCP\JSON::success(array('data'=>array('user'=>$user, 'certificate'=>$cert)));
+	$subject = OC_Chooser::getSDCertSubject($user);
+	$serial = OC_Chooser::getSDCertSerial($user);
+	OCP\JSON::success(array('data'=>array('user'=>$user, 'subject'=>$subject,
+			'serial'=>$serial, 'certificate'=>$cert)));
 }
 else{
 	OCP\JSON::error(array('message'=>'Failed obtaining certificates of user '.$user));
