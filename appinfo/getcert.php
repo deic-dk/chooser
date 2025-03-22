@@ -25,13 +25,13 @@ if(!$ok){
 	$ok = $authBackendIP->checkUserPass($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']);
 }
 
-if(!$ok){
+/*if(!$ok){
 	header($_SERVER['SERVER_PROTOCOL'] . ' 403 Forbidden');
 	exit();
 }
+OCP\JSON::checkLoggedIn();*/
 
-OCP\JSON::checkLoggedIn();
-$user = \OCP\USER::getUser();
+$user = empty($_REQUEST['user'])?\OCP\USER::getUser():$_REQUEST['user'];
 
 require_once('apps/chooser/appinfo/apache_note_user.php');
 
