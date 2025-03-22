@@ -90,13 +90,13 @@ class X509 extends AbstractBasic {
 		// Check that the serial of the received certificate matches the one of the currently active one
 		// See https://cweiske.de/tagebuch/ssl-client-certificates.htm
 		$checkUser = \OC_Chooser::getUserFromSubject($clientDN, $user);
-		if(empty($checkUser)){
-			return "";
-		}
 		$checkSerial = \OC_Chooser::getSDCertSerial($checkUser);
 		if($_SERVER['SSL_CLIENT_M_SERIAL']!=$checkSerial){
 			\OC_Log::write('chooser','Certificate serials mismatch: for '.$checkUser.' : '.
 					$_SERVER['SSL_CLIENT_M_SERIAL'].' != '.$checkSerial, \OC_Log::ERROR);
+			if(!empty($checkUser)){
+				return "";
+			}
 		}
 		
 		// Check if the request is from a host trusted to relay DN in header.
