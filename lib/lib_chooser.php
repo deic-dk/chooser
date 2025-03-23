@@ -99,8 +99,8 @@ class OC_Chooser {
 
 	public static function checkIP(){
 		require_once('apps/files_sharding/lib/lib_files_sharding.php');
-		if(isset($_SERVER['REMOTE_ADDR']) && self::checkUserVlan($_SERVER['REMOTE_ADDR']) ||
-				($_SERVER['REMOTE_ADDR']=="localhost" || $_SERVER['REMOTE_ADDR']=="127.0.0.1")){
+		if(isset($_SERVER['REMOTE_ADDR']) && (self::checkUserVlan($_SERVER['REMOTE_ADDR']) ||
+				($_SERVER['REMOTE_ADDR']=="localhost" || $_SERVER['REMOTE_ADDR']=="127.0.0.1"))){
 			$user_id = '';
 			$list_array = [];
 			if(!empty(self::$vlanlisturl) && ($list_array = apc_fetch(self::$IPS_CACHE_KEY)) === false){

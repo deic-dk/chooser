@@ -395,7 +395,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/groupfolders',
 					'<d:href>'.OC::$WEBROOT.'/remote.php/groupfolders/remote.php/webdav', $data);
 		}
-		OC_Log::write('chooser','SENDING DATA: '.$_SERVER['HTTP_USER_AGENT'].':'.$user.':'.$uri.'-->'.$data, OC_Log::INFO);
+		//OC_Log::write('chooser','SENDING DATA: '.$_SERVER['HTTP_USER_AGENT'].':'.$user.':'.$uri.'-->'.$data, OC_Log::INFO);
 		$this->httpResponse->sendBody($data);
 
 	}
