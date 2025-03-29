@@ -28,10 +28,9 @@ $user = \OCP\USER::getUser();
 
 $vlantrusteduser = trim(\OCP\Config::getSystemValue('vlantrusteduser', ''));
 $vlantrusteduser1 = OC_Appconfig::getValue('user_pods', 'trustedUser');
-$batchtrusteduser = trim(\OCP\Config::getSystemValue('batchtrusteduser', 'batch'));
 
 // Never hand out keys of trusted users
-if(empty($user) || $user==$vlantrusteduser || $user==$vlantrusteduser1 || $user==$batchtrusteduser){
+if(empty($user) || $user==$vlantrusteduser || $user==$vlantrusteduser1){
 	OCP\JSON::error(array('message'=>'Failed obtaining private key of user '.$user));
 	exit;
 }
