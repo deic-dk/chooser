@@ -436,11 +436,15 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 	private static function unsecureContentType($filepath, $contentType){
 		if(strtolower(substr($filepath, -5))===".html"){
 			$contentType = "text/html";
+			//$contentType = "";
 		}
 		// Fix up quicktime files, so iPads, iPhones will play
 		elseif(strtolower(substr($filepath, -4))===".mov"){
 			$contentType = "video/mp4";
-			//$contentType = "";
+		}
+		// SVG images
+		elseif(strtolower(substr($filepath, -4))===".svg"){
+			$contentType = "image/svg+xml";
 		}
 		return $contentType;
 	}
