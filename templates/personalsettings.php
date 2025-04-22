@@ -34,10 +34,12 @@ $l = OC_L10N::get('chooser');
 	<input type="text" id="ssl_days"
 		placeholder="<?php p($l->t('Days of validity'));?>" />
 	<label id="chooser_sd_cert_generate" class="button"><?php p($l->t("Generate"));?></label>
+	<br />
+	<div id="sd_cert_info" class="certinfo<?php if(empty($_['sd_cert_dn'])){ ?> hidden<?php }?>">
 	<label><?php p($l->t("Existing"));?>:</label>
-	<span class="chooser_sd_cert<?php if(empty($_['sd_cert_dn'])){ ?> hidden<?php } ?>"><a href="<?php p(OC::$WEBROOT);?>/apps/chooser/ajax/get_cert.php">cert</a>, <a href="<?php p(OC::$WEBROOT);?>/apps/chooser/ajax/get_key.php">key</a>, <a href="<?php p(OC::$WEBROOT);?>/apps/chooser/ajax/get_pkcs12.php">p12</a>, DN:</span><label id="chooser_sd_cert_dn" class="text"><?php echo($_['sd_cert_dn']);?></label>
-	<span class="chooser_sd_cert<?php if(empty($_['sd_cert_dn'])){ ?> hidden"<?php } ?>">Expires:</span><label id="chooser_sd_cert_expires" class="text"><?php echo($_['sd_cert_expires']);?></label>
-	
+	<span class="chooser_sd_cert"><a href="<?php p(OC::$WEBROOT);?>/apps/chooser/ajax/get_cert.php">cert</a>, <a href="<?php p(OC::$WEBROOT);?>/apps/chooser/ajax/get_key.php">key</a>, <a href="<?php p(OC::$WEBROOT);?>/apps/chooser/ajax/get_pkcs12.php">p12</a>, <a href="<?php p(OC::$WEBROOT);?>/apps/chooser/ajax/get_id_rsa.php">id_rsa</a>, <a href="<?php p(OC::$WEBROOT);?>/apps/chooser/ajax/get_id_rsa.php?public=true">id_rsa.pub</a>, DN:</span><label id="chooser_sd_cert_dn" class="text"><?php echo($_['sd_cert_dn']);?></label>
+	<span class="chooser_sd_cert<?php if(empty($_['sd_cert_dn'])){ ?> hidden"<?php } ?>">Expires:</span><label id="chooser_sd_cert_expires" class="text"><?php echo($_['sd_cert_expires']);?></label><label id="chooser_sd_cert_key_delete" class="button"><?php p($l->t("Delete"));?></label>
+	</div>
 	<br />
 
 	<?php p($l->t('Allow authentication with external X.509 certificate:').' '); ?>

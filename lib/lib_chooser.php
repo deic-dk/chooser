@@ -384,11 +384,19 @@ END;
 		$secret  = \OC_Config::getValue('secret', 'secret');
 		$ca_cert  = \OC_Config::getValue('my_ca_certificate', '');
 		$ca_key  = \OC_Config::getValue('my_ca_privatekey', '');
-		// Generate encrypted key and cert request in user_id/chooser/ssl/
-		// FO: Switched from rsa:4096 to rsa:2048 to be able to use the key to send to Nexcloud iOS client (redundant answer to push setup request - to avoid error messages)
-		$reqStr = "openssl req -new -out \"$certDir/userreq.pem\" -newkey rsa:4096 -keyout \"$certDir/userkey.pem\" -subj \"/CN=$user/O=sciencedata.dk\" -passout pass:$secret";
-		OC_Log::write('chooser',"Generating certificate request with: ".$reqStr, OC_Log::WARN);
-		exec($reqStr, $output, $ret);
+		if(file_exists("$certDir/userkey.pem")){
+			// If key exists, reuse it
+			$reqStr = "openssl req -new -out \"$certDir/userreq.pem\" -key \"$certDir/userkey.pem\" -subj \"/CN=$user/O=sciencedata.dk\" -passin pass:$secret";
+			OC_Log::write('chooser',"Generating certificate request with: ".$reqStr, OC_Log::WARN);
+			exec($reqStr, $output, $ret);
+		}
+		else{
+			// Generate encrypted key and cert request in user_id/chooser/ssl/
+			// FO: Switched from rsa:4096 to rsa:2048 to be able to use the key to send to Nexcloud iOS client (redundant answer to push setup request - to avoid error messages)
+			$reqStr = "openssl req -new -out \"$certDir/userreq.pem\" -newkey rsa:4096 -keyout \"$certDir/userkey.pem\" -subj \"/CN=$user/O=sciencedata.dk\" -passout pass:$secret";
+			OC_Log::write('chooser',"Generating certificate request with: ".$reqStr, OC_Log::WARN);
+			exec($reqStr, $output, $ret);
+		}
 		if($ret==0){
 			$signStr = "RANDFILE=/tmp/.random openssl x509 -req -in \"$certDir/userreq.pem\" -CA \"$ca_cert\" -CAkey \"$ca_key\" -CAcreateserial -out \"$certDir/usercert.pem\" -days $days -sha256";
 			OC_Log::write('chooser',"Signing certificate request with: ".$signStr, OC_Log::WARN);
@@ -416,6 +424,24 @@ END;
 			$cert = file_get_contents("$certDir/usercert.pem");
 		}
 		return $cert;
+	}
+	
+	public static function deleteSDCertKey($user) {
+		$certDir = self::getAppDir($user)."ssl";
+		$ret = true;
+		if(file_exists("$certDir/userreq.pem")){
+			$ret = $ret && unlink("$certDir/userreq.pem");
+		}
+		if(file_exists("$certDir/userkey.pem")){
+			$ret = $ret && unlink("$certDir/userkey.pem");
+		}
+		if(file_exists("$certDir/usercert.pem")){
+			$ret = $ret && unlink("$certDir/usercert.pem");
+		}
+		if(file_exists("$certDir/id_rsa")){
+			$ret = $ret && unlink("$certDir/id_rsa");
+		}
+		return $ret;
 	}
 	
 	/**
@@ -497,6 +523,30 @@ END;
 			$pkgs12Str = "openssl pkcs12 -export -inkey \"$certDir/userkey.pem\" -in \"$certDir/usercert.pem\" -passout pass: -passin pass:".$secret;
 			OC_Log::write('chooser',"Generating PKCS12 output with ".$pkgs12Str, OC_Log::WARN);
 			$output = shell_exec($pkgs12Str);
+		}
+		return $output;
+	}
+	
+	public static function getSDID_RSA($user, $public=false) {
+		$output = [];
+		$certDir = self::getAppDir($user)."ssl";
+		$secret  = \OC_Config::getValue('secret', 'secret');
+		if(!file_exists("$certDir/userkey.pem")){
+			return $output;
+		}
+		// Recreate the key from the SSL key - in case the SSL key was recreated.
+		$idrsaStr = "openssl rsa -in \"$certDir/userkey.pem\" -passout pass: -passin pass:".$secret." -out \"$certDir/id_rsa\" && chmod go-rw \"$certDir/id_rsa\"";
+		OC_Log::write('chooser',"Generating SSH key with ".$idrsaStr, OC_Log::WARN);
+		shell_exec($idrsaStr);
+		if($public){
+			$idrsaStr = "ssh-keygen -f \"$certDir/id_rsa\" -y";
+			OC_Log::write('chooser',"Generating SSH key output with ".$idrsaStr, OC_Log::WARN);
+			$output = shell_exec($idrsaStr);
+		}
+		else{
+			$idrsaStr = "cat \"$certDir/id_rsa\"";
+			OC_Log::write('chooser',"Generating SSH key output with ".$idrsaStr, OC_Log::WARN);
+			$output = shell_exec($idrsaStr);
 		}
 		return $output;
 	}

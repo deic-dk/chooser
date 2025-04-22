@@ -97,6 +97,43 @@ function removeSubject(dn){
 	});
 }
 
+function deleteCertKey(){
+	OC.dialogs.prompt("Are you sure you want to delete your private key?<br />\
+This will invalidate any existing SSL certificates and/or SSH public keys you may be using.", 
+			"Confirm delete private key and public/signed certificate.",
+			function(res){
+				if(res){
+					doDeleteCertKey();
+				}
+			},
+			true
+		);
+}
+
+function doDeleteCertKey(){
+	$.ajax(OC.linkTo('chooser','ajax/delete_cert_key.php'), {
+		 type:'GET',
+		  data:{
+		 },
+		 dataType:'json',
+		 success: function(s){
+			 if(s.error){
+				 OC.msg.finishedSaving('#chooser_msg', {status: 'success', data: {message: s.error}});
+			 }
+			 else{
+				 $('#chooser_msg').show();
+				 $('#chooser_msg').removeClass('error');
+				 $('#sd_cert_info').addClass('hidden');
+				 OC.msg.finishedSaving('#chooser_msg', {status: 'success', data: {message: s.message}});
+			 }
+		 },
+		error:function(s){
+			 $('#chooser_msg').removeClass('success');
+			 OC.msg.finishedSaving('#chooser_msg', {status: 'error', data: {message: "Unexpected error"}});
+		}
+	});
+}
+
 function generateCert(){
 	var days = $('#ssl_days').val();
 	if(!/^-?\d+$/.test(days) || days==0){
@@ -114,9 +151,9 @@ function generateCert(){
 				OC.msg.finishedSaving('#chooser_msg', {status: 'error', data: {message: s.error}});
 			 }
 			 else{
+				 $('#sd_cert_info').removeClass('hidden');
 				$('#chooser_msg').show();
 				$('#chooser_msg').removeClass('error');
-				$('#chooser_sd_cert').removeClass('hidden');
 				$('#chooser_sd_cert_dn').text(s.dn);
 				$('#chooser_sd_cert_expires').text(s.expires);
 				OC.msg.finishedSaving('#chooser_msg', {status: 'success', data: {message: s.message}});
@@ -176,6 +213,10 @@ $(document).ready(function(){
 	
 	$('#chooser_sd_cert_generate').click(function(ev){
 		generateCert();
+	});
+	
+	$('#chooser_sd_cert_key_delete').click(function(ev){
+		deleteCertKey();
 	});
 	
 	$('#chooser_dav_path_submit').click(function(ev){
