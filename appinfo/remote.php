@@ -136,15 +136,28 @@ elseif((rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/fil
 		$user || strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/files/".
 		$user."/")===0) /*&&
 		strtolower($_SERVER['REQUEST_METHOD'])=='proppatch'*/){
-		$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
-			$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
+	$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
+	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
+}
+elseif((rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/uploads/".
+		$user || strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/uploads/".
+				$user."/")===0)){
+	$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
+	if(strlen($_SERVER['REQUEST_URI'])>4 && substr($_SERVER['REQUEST_URI'], -5, 5)=='.file'){
+		$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/remote.php/dav/uploads/".$user."/|",
+				OC::$WEBROOT."/remote.php/dav/files/".$user."/", $_SERVER['REQUEST_URI']);
+		$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
+	}
+	else{
+		$baseuri = OC::$WEBROOT."/remote.php/dav/uploads/".$user;
+	}
 }
 elseif(rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/sharingin/remote.php/dav/files/".
 		$user || strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/sharingin/remote.php/dav/files/".
 		$user."/")===0){
-			$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
-		$baseuri = OC::$WEBROOT."/sharingin/remote.php/dav/files/".$user;
-		$objectTree->sharingIn = true;
+	$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
+	$baseuri = OC::$WEBROOT."/sharingin/remote.php/dav/files/".$user;
+	$objectTree->sharingIn = true;
 }
 elseif(strpos($_SERVER['REQUEST_URI'], OC::$WEBROOT."/sharingin/remote.php/webdav")===0){
 	$baseuri = OC::$WEBROOT."/sharingin/remote.php/webdav";

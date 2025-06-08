@@ -259,6 +259,64 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		return parent::httpOptions($uri);
 	}
 	
+	protected function httpMove($uri) {
+		if(strlen($uri)>4 && substr($uri, -5, 5)=='.file'){
+			$moveInfo = $this->getCopyAndMoveInfo();
+			$path = rtrim($uri,'/.file');
+			OC_Log::write('chooser','Moving: '.$path, OC_Log::WARN);
+			$children = $this->tree->getChildren($path);
+			usort($children, function($a, $b) {
+				return $a->getName() > $b->getName();
+			});
+			$fileContent = '';
+			$user = \OCP\USER::getUser();
+			if(!empty($this->tree->group) && $this->tree->group){
+				$group_dir = "/" . $user . "/user_group_admin/".$this->tree->group;
+				$view = new \OC\Files\View($group_dir);
+			}
+			else{
+				$view = \OC\Files\Filesystem::getView();
+			}
+			$dataDir = \OC_Config::getValue("datadirectory", \OC::$SERVERROOT . "/data");
+			$destination = $view->getAbsolutePath($moveInfo['destination']);
+			$fp1 = fopen($dataDir.$destination, 'x');
+			foreach($children as $childNode){
+				if(!preg_match('|[0-9]+|', $childNode->getName())){
+					continue;
+				}
+				$absChunkPath = $view->getAbsolutePath($path . '/' . $childNode->getName());
+				OC_Log::write('chooser','Merging: '.$dataDir.$absChunkPath, OC_Log::WARN);
+				$fileContent = file_get_contents($dataDir.$absChunkPath);
+				fwrite($fp1, $fileContent);
+			}
+			fclose($fp1);
+			list($storage, $internalPath) = $view->resolvePath('/'.$moveInfo['destination']);
+			if($storage){
+				OC_Log::write('chooser','Writing: '.$storage->getCache()->getNumericStorageId().'-->'.$moveInfo['destination'].' : '.$dataDir.$destination, OC_Log::WARN);
+				$scanner = $storage->getScanner($internalPath);
+				$fileData = $scanner->scanFile($internalPath);
+				$this->httpResponse->setHeader('oc-fileid', $fileData['fileid']);
+				$this->httpResponse->setHeader('etag', '"'.$fileData['etag'].'"');
+				$this->httpResponse->setHeader('oc-etag', '"'.$fileData['etag'].'"');
+				$this->httpResponse->setHeader('content-type', $fileData['mimetype']);
+				$this->httpResponse->sendStatus(201);
+			}
+			// Now delete the chunks directory
+			foreach($children as $childNode){
+				if(!preg_match('|[0-9]+|', $childNode->getName())){
+					continue;
+				}
+				$absChunkPath = $view->getAbsolutePath($path . '/' . $childNode->getName());
+				unlink($dataDir.$absChunkPath);
+			}
+			$absChunksDir = $view->getAbsolutePath($path);
+			rmdir($absChunksDir);
+		}
+		else{
+			return parent::httpMove($uri);
+		}
+	}
+	
 	// Array like [['prop'=>'{DAV:}getlastmodified', 'direction'=>'ascending'], ['prop'=>'{DAV:}displayname', 'direction'=>'ascending'], ...]
 	private $orderBy = [];
 	/**
