@@ -139,11 +139,13 @@ elseif((rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/fil
 	$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
 	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
 }
-elseif((rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/uploads/".
-		$user || strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/uploads/".
-				$user."/")===0)){
+elseif(strpos(rawurldecode($_SERVER['REQUEST_URI']), OC::$WEBROOT."/remote.php/dav/uploads/".
+		$user."/")===0 && // Avoid accidental deletion of whole homedir
+		strlen($_SERVER['REQUEST_URI'])>strlen(OC::$WEBROOT."/remote.php/dav/uploads/".
+				$user."/")+8){
 	$_SERVER['REQUEST_URI'] = rawurldecode($_SERVER['REQUEST_URI']);
 	if(strlen($_SERVER['REQUEST_URI'])>4 && substr($_SERVER['REQUEST_URI'], -5, 5)=='.file'){
+		$_SERVER['UPLOAD_URI'] = $_SERVER['REQUEST_URI'];
 		$_SERVER['REQUEST_URI'] = preg_replace("|^".OC::$WEBROOT."/remote.php/dav/uploads/".$user."/|",
 				OC::$WEBROOT."/remote.php/dav/files/".$user."/", $_SERVER['REQUEST_URI']);
 		$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;

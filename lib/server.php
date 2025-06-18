@@ -260,7 +260,8 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 	}
 	
 	protected function httpMove($uri) {
-		if(strlen($uri)>4 && substr($uri, -5, 5)=='.file'){
+		if(strlen($uri)>4 && substr($uri, -5, 5)=='.file' &&
+				!empty($_SERVER['UPLOAD_URI'])){
 			$moveInfo = $this->getCopyAndMoveInfo();
 			$path = rtrim($uri,'/.file');
 			OC_Log::write('chooser','Moving: '.$path, OC_Log::WARN);
@@ -280,6 +281,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			$dataDir = \OC_Config::getValue("datadirectory", \OC::$SERVERROOT . "/data");
 			$destination = $view->getAbsolutePath($moveInfo['destination']);
 			$fp1 = fopen($dataDir.$destination, 'x');
+			$childNodes = count($children);
 			foreach($children as $childNode){
 				if(!preg_match('|[0-9]+|', $childNode->getName())){
 					continue;
@@ -302,6 +304,8 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				$this->httpResponse->sendStatus(201);
 			}
 			// Now delete the chunks directory
+			$absPath = $view->getAbsolutePath($path);
+			$handle = opendir($absPath);
 			foreach($children as $childNode){
 				if(!preg_match('|[0-9]+|', $childNode->getName())){
 					continue;
@@ -309,8 +313,8 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				$absChunkPath = $view->getAbsolutePath($path . '/' . $childNode->getName());
 				unlink($dataDir.$absChunkPath);
 			}
-			$absChunksDir = $view->getAbsolutePath($path);
-			rmdir($absChunksDir);
+			closedir($handle);
+			$view->rmdir($path);
 		}
 		else{
 			return parent::httpMove($uri);
@@ -376,7 +380,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		// $xml = new \Sabre\DAV\XMLReader(file_get_contents('php://input'));
 		$xml = $this->httpRequest->getBody(true);
 		if(!empty($xml)){
-			OC_Log::write('chooser','PROPFIND XML: '.$xml, OC_Log::INFO);
+			OC_Log::write('chooser','PROPFIND XML: '.$xml, OC_Log::WARN);
 		}
 		$requestedProperties = $this->parsePropFindRequest($xml);
 
@@ -707,7 +711,15 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 							}
 						}
 						break;
-					case '{DAV:}quota-used-bytes':
+					case '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}size':
+						if ($node instanceof \Sabre\DAV\IFile) {
+							$size = $node->getSize();
+							if (!is_null($size)) {
+								$newProperties[200][$prop] = (int)$node->getSize();
+							}
+						}
+						break;
+						case '{DAV:}quota-used-bytes':
 						if ($node instanceof \Sabre\DAV\IQuota) {
 							$quotaInfo = $node->getQuotaInfo();
 							$newProperties[200][$prop] = $quotaInfo[0];
@@ -820,7 +832,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				$manualProp = '{DAV:}getcontentlength';
 				$newProperties[200][$manualProp] =
 				$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
-				unset($newProperties[404][$manualProp]);
+				//unset($newProperties[404][$manualProp]);
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite';
 				$newProperties[200][$manualProp] = '0';
 				unset($newProperties[404][$manualProp]);
