@@ -508,6 +508,19 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		elseif(strtolower(substr($filepath, -4))===".svg"){
 			$contentType = "image/svg+xml";
 		}
+		// Images
+		elseif(strtolower(substr($filepath, -4))===".gif" ||strtolower(substr($filepath, -4))===".png" ||
+				strtolower(substr($filepath, -4))===".jpg"){
+					$contentType = "image/".strtolower(substr($filepath, -3));
+		}
+		// JS
+		elseif(strtolower(substr($filepath, -3))===".js"){
+			$contentType = "application/javascript";
+		}
+		// CSS
+		elseif(strtolower(substr($filepath, -4))===".css"){
+			$contentType = "text/css";
+		}
 		return $contentType;
 	}
 
