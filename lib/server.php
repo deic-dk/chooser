@@ -34,6 +34,8 @@
 class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 	
 	const NS_NEXTCLOUD = 'http://nextcloud.org/ns';
+	const NS_OCS = 'http://open-collaboration-services.org/ns';
+	const NS_OCM = 'http://open-cloud-mesh.org/ns';
 	
 	public function invokeMethod($method, $uri) {
 		
@@ -78,6 +80,13 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 	protected function httpSearch($uri) {
 		$this->mediaSearch = true;
 		$xml = $this->httpRequest->getBody(true);
+		try{
+			$accept_arr = json_decode('["'.preg_replace('|, |', '", "',$_SERVER['HTTP_ACCEPT']).'"]', true);
+		}
+		catch(\Exception $e){
+		}
+		OC_Log::write('chooser','Accept: '.$_SERVER['HTTP_ACCEPT'].'-->'.serialize($accept_arr), OC_Log::WARN);
+		OC_Log::write('chooser','Media search XML: '.$xml, OC_Log::INFO);
 		
 		$xml = str_replace('<d:searchrequest', '<d:propfind', $xml);
 		$xml = str_replace('</d:searchrequest', '</d:propfind', $xml);
@@ -86,7 +95,6 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		$xml = str_replace('<d:select>', '', $xml);
 		$xml = str_replace('</d:select>', '', $xml);
 		$this->httpRequest->setBody($xml);
-		OC_Log::write('chooser','Media search XML: '.$xml, OC_Log::WARN);
 		$xml = preg_replace('/&(?!#?[a-z0-9]+;)/', '&amp;', $xml);
 		$parsed = simplexml_load_string($xml);
 		$parsed = dom_import_simplexml($parsed);
@@ -224,7 +232,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		}
 		
 		$this->httpResponse->sendStatus(207);
-		$this->httpResponse->setHeader('Content-Type','application/xml; charset=utf-8');
+		$this->httpResponse->setHeader('Content-Type','application/xml; charset="utf-8"');
 		
 		$this->httpResponse->sendBody(
 				$this->generateMultiStatus(array($result))
@@ -240,7 +248,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 	private $favoriteSearch = false;
 	protected function httpReport($uri) {
 		$xml = $this->httpRequest->getBody(true);
-		OC_Log::write('chooser','Favorite search XML: '.$xml, OC_Log::WARN);
+		OC_Log::write('chooser','Favorite search XML: '.$xml, OC_Log::INFO);
 		$xml = preg_replace('/&(?!#?[a-z0-9]+;)/', '&amp;', $xml);
 		$parsed = simplexml_load_string($xml);
 		$parsed = dom_import_simplexml($parsed);
@@ -380,7 +388,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		// $xml = new \Sabre\DAV\XMLReader(file_get_contents('php://input'));
 		$xml = $this->httpRequest->getBody(true);
 		if(!empty($xml)){
-			OC_Log::write('chooser','PROPFIND XML: '.$xml, OC_Log::WARN);
+			OC_Log::write('chooser','PROPFIND XML: '.$_SERVER['REQUEST_METHOD'].' --> '.$xml, OC_Log::INFO);
 		}
 		$requestedProperties = $this->parsePropFindRequest($xml);
 
@@ -411,9 +419,10 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 
 		// This is a multi-status response
 		$this->httpResponse->sendStatus(207);
-		$this->httpResponse->setHeader('Content-Type','application/xml; charset=utf-8');
+		$this->httpResponse->setHeader('Content-Type','application/xml; charset="utf-8"');
 		$this->httpResponse->setHeader('Vary','Brief,Prefer');
-
+		$this->httpResponse->setHeader('Status','207');
+		
 		// Normally this header is only needed for OPTIONS responses, however..
 		// iCal seems to also depend on these being set for PROPFIND. Since
 		// this is not harmful, we'll add it.
@@ -435,7 +444,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		if(!empty($this->tree->sharingIn) && $this->tree->sharingIn){
 			$data = str_replace('<oc:permissions></oc:permissions>', '<oc:permissions>S</oc:permissions>', $data);
 		}
-		OC_Log::write('chooser','PROPFIND: '.$data, OC_Log::DEBUG);
+		OC_Log::write('chooser','PROPFIND: '.$data, OC_Log::INFO);
 		if($this->favoriteSearch){
 			$user = \OCP\USER::getUser();
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/mydav/',
@@ -448,6 +457,9 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			$user = \OCP\USER::getUser();
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/mydav/', '<d:href>'.OC::$WEBROOT.'/remote.php/dav/files/'.
 					$user.'/', $data);
+			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/dav/', '<d:href>'.OC::$WEBROOT.'/remote.php/dav/files/'.
+					$user.'/', $data);//$data = preg_replace('|<oc:permissions>[^/]*</oc:permissions>|', '<oc:permissions>RGDNVW</oc:permissions>', $data);
+			$data = preg_replace('|<d:getcontenttype>image/jpg</d:getcontenttype>|', '<d:getcontenttype>image/jpeg</d:getcontenttype>', $data);
 		}
 		if(!empty($this->tree->usage) && $this->tree->usage){
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/usage',
@@ -457,7 +469,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/groupfolders',
 					'<d:href>'.OC::$WEBROOT.'/remote.php/groupfolders/remote.php/webdav', $data);
 		}
-		//OC_Log::write('chooser','SENDING DATA: '.$_SERVER['HTTP_USER_AGENT'].':'.$user.':'.$uri.'-->'.$data, OC_Log::INFO);
+		OC_Log::write('chooser','SENDING DATA: '.$_SERVER['HTTP_USER_AGENT'].':'.$user.':'.$uri.'-->'.$data, OC_Log::INFO);
 		$this->httpResponse->sendBody($data);
 
 	}
@@ -624,6 +636,9 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		$allProperties = count($propertyNames)==0;
 		OC_Log::write('chooser','REQUESTED PROPERTIES: '.serialize($propertyNames), OC_Log::INFO);
 		
+		$user = \OCP\USER::getUser();
+		$ownerdisplayname = \OC_User::getDisplayName($user);
+		
 		foreach($nodes as $myPath=>$node) {
 
 			$currentPropertyNames = $propertyNames;
@@ -774,7 +789,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 									substr($node->getContentType(), 0, 6)=="movie/" ||
 									substr($node->getContentType(), 0, 6)=="video/" ||
 									substr($node->getContentType(), 0, 5)=="text/"){
-								$newProperties[200][$prop] = true;
+								$newProperties[200][$prop] = 'true';
 							}
 							OC_Log::write('chooser','PROP: '.$myPath.'-->'.$prop.'-->'.get_class($node).
 									'-->'.$node->getContentType().'-->'.$newProperties[200][$prop], OC_Log::INFO);
@@ -834,24 +849,76 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				}
 			}
 
-			if($this->mediaSearch){
+			if($this->mediaSearch || $node instanceof \Sabre\DAV\IFile && substr($node->getContentType(), 0, 6)=="image/"){
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
-				$newProperties[200][$manualProp] = \OCA\FilesSharding\Lib::getFileId($path);
+				$newProperties[200][$manualProp] = \OCA\FilesSharding\Lib::getFileId($myPath);
 				unset($newProperties[404][$manualProp]);
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}size';
-				$newProperties[200][$manualProp] =
-				$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
+				$newProperties[200][$manualProp] = $node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
 				unset($newProperties[404][$manualProp]);
 				$manualProp = '{DAV:}getcontentlength';
-				$newProperties[200][$manualProp] =
-				$node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
+				$newProperties[200][$manualProp] = $node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
 				//unset($newProperties[404][$manualProp]);
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite';
 				$newProperties[200][$manualProp] = '0';
 				unset($newProperties[404][$manualProp]);
-				$manualProp = '{' . self::NS_NEXTCLOUD . '}is-encrypted';
-				$newProperties[200][$manualProp] = '0';
+				//$manualProp = '{' . self::NS_NEXTCLOUD . '}is-encrypted';
+				//$newProperties[200][$manualProp] = '0';
+				//unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}hidden';
+				$newProperties[200][$manualProp] = 'false';
 				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}share-download-limits';
+				$newProperties[200][$manualProp] = '';
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}downloadURL';
+				$newProperties[200][$manualProp] = '';
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}data-fingerprint';
+				$newProperties[200][$manualProp] = '';
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}comments-unread';
+				$newProperties[200][$manualProp] = 0;
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}share-types';
+				$newProperties[200][$manualProp] = '';
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}mount-type';
+				$newProperties[200][$manualProp] = '';
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}system-tags';
+				$newProperties[200][$manualProp] = '';
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}creation_time';
+				$newProperties[200][$manualProp] = 0;
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}upload_time';
+				$newProperties[200][$manualProp] = 0;
+				unset($newProperties[404][$manualProp]);
+				$fileFullPath = \OC\Files\Filesystem::getLocalFile($myPath);
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}metadata-photos-size';
+				$newProperties[200][$manualProp] = new ImageSize($fileFullPath);
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}metadata-photos-exif';
+				$newProperties[200][$manualProp] = new PhotosExif($fileFullPath);
+				unset($newProperties[404][$manualProp]);
+				$original_seconds = !empty($newProperties[200][$manualProp]->keyvalues['original_date_time_seconds'])?
+						$newProperties[200][$manualProp]->keyvalues['original_date_time_seconds']:$node->getLastModified();
+				$manualProp = '{' . self::NS_NEXTCLOUD . '}metadata-photos-original_date_time';
+				$newProperties[200][$manualProp] = $original_seconds;
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}owner-id';
+				$newProperties[200][$manualProp] = $user;
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}owner-display-name';
+				$newProperties[200][$manualProp] = $ownerdisplayname;
+				unset($newProperties[404][$manualProp]);
+				//$manualProp = '{' . self::NS_OCS . '}share-permissions';
+				//$newProperties[200][$manualProp] = 19;
+				//unset($newProperties[404][$manualProp]);
+				//$manualProp = '{' . self::NS_OCM . '}share-permissions';
+				//$newProperties[200][$manualProp] = '["share","read","write"]';
+				//unset($newProperties[404][$manualProp]);
 				//manualProp = '{' . self::NS_NEXTCLOUD . '}has-preview';
 				//$newProperties[200][manualProp] = '0';
 				if(!empty($this->where)){
@@ -865,14 +932,20 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 						}
 						$whereExp = str_replace($prop, $val, $whereExp);
 					}
-					$whereExp = preg_replace('| ([^ ]+) like ([^ ]+)/% |', ' $1 like $2/.* ', $whereExp);
-					$whereExp = preg_replace('| ([^ ]+) like ([^ ]+) |', ' preg_match("|$2|", "$1") ', $whereExp);
-					$whereExp = preg_replace('| ([^ ]+) lt ([^ ]+) |', ' "$1" < "$2" ', $whereExp);
-					$whereExp = preg_replace('| ([^ ]+) gt ([^ ]+) |', ' "$1" > "$2" ', $whereExp);
+					$whereExp = preg_replace('|([^ ]+) like ([^ ]+)/%|', ' $1 like $2/.* ', $whereExp);
+					$whereExp = preg_replace('|([^ ]+) like ([^ ]+)|', ' preg_match("|$2|", "$1") ', $whereExp);
+					$whereExp = preg_replace('|([^ ]+) lt ([^ ]+)|', ' "$1" < "$2" ', $whereExp);
+					$whereExp = preg_replace('|([^ ]+) gt ([^ ]+)|', ' "$1" > "$2" ', $whereExp);
 					$whereExp = '$res = ' . $whereExp . '; return $res;';
-					$res = eval($whereExp);
-					OC_Log::write('chooser','Where expression eval res: '.$whereExp.'-->'.$res, OC_Log::INFO);
-					if(!$res){
+					$res = '';
+					try{
+						$res = eval($whereExp);
+					}
+					catch(Exception $e){
+					}
+					\OC_Log::write('chooser','Expect: '.$_SERVER['HTTP_EXPECT'], \OC_Log::WARN);
+					\OC_Log::write('chooser','Where expression eval res: '.$whereExp.'-->'.\OCA\FilesSharding\Lib::getFileId($myPath).'-->'.$myPath.'-->'.$res, OC_Log::WARN);
+					if(empty($res)){
 						continue;
 					}
 				}
@@ -942,7 +1015,9 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				unset($newProperties[200]['{DAV:}resourcetype']);
 			}
 
-			$returnPropertyList[] = $newProperties;
+			if(!$this->mediaSearch || ! $node instanceof OC_Connector_Sabre_Favorite_Directory){
+				$returnPropertyList[] = $newProperties;
+			}
 
 		}
 
@@ -964,6 +1039,112 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			}
 		}
 		return true;
-  }
+	}
 	
 }
+
+class ImageSize extends \Sabre\DAV\Property {
+	
+	private $width;
+	private $height;
+	private $absFilePath;
+	
+	public function __construct($fullPath) {
+		try{
+			$width = shell_exec("identify \"$fullPath\" | sed -E 's|.* ([0-9]+x[0-9]+) .*|\\1|' | awk -Fx '{print \$1}'");
+			$height = shell_exec("identify \"$fullPath\" | sed -E 's|.* ([0-9]+x[0-9]+) .*|\\1|' | awk -Fx '{print \$2}'");
+			$this->width = intval($width);
+			$this->height = intval($height);
+			if(!is_scalar($this->width) || !is_scalar($this->height)) {
+				throw new \DAV\Exception('Width and height must be scalars');
+			}
+		}
+		catch(Exception $e){
+			\OC_Log::write('chooser','EXIF parsing error: '.$e->getMessage(), \OC_Log::ERROR);
+		}
+	}
+	
+	public function serialize(\Sabre\DAV\Server $server, \DOMElement $node) {
+		$prefix = $server->xmlNamespaces['NS_NEXTCLOUD:'];
+		$image_dimensions = $node->ownerDocument->createElement($prefix . ':metadata-photos-size');
+		$width = $node->ownerDocument->createElement('width');
+		$width->nodeValue = $this->width;
+		$image_dimensions->appendChild($width);
+		$node->appendChild($width);
+		$height = $node->ownerDocument->createElement('height');
+		$height->nodeValue = $this->height;
+		$image_dimensions->appendChild($height);
+		$node->appendChild($height);
+	}
+	
+}
+
+class PhotosExif extends \Sabre\DAV\Property {
+	
+	public $keyvalues;
+	
+	public function __construct($fullPath) {
+		try{
+			$json = shell_exec("file \"$fullPath\" | sed -E 's|.*Exif Standard: \\[(.*)\\].*|\\1|' | tr ',' '\\n' | sed -E 's|^ ||' | grep = | while read name; do key=`echo \$name | awk -F= '{print $1}'`; val=`echo \$name | awk -F= '{print $2}'`; echo \"\\\"\$key\\\":\\\"\$val\\\",\"; done | tr '\n' ' ' | sed 's|, $||g' | tr -d '\n'");
+			$this->keyvalues = json_decode("{".$json."}", true);
+			$this->keyvalues['DateTimeOriginal'] = $this->keyvalues['datetime'];
+			$this->keyvalues['DateTimeDigitized'] = $this->keyvalues['datetime'];
+			try{
+				$this->keyvalues['original_date_time_seconds'] = strtotime($this->keyvalues['datetime']);
+			}
+			catch(Exception $e){
+				\OC_Log::write('chooser','Date parsing error: '.$e->getMessage(), \OC_Log::ERROR);
+			}
+		}
+		catch(Exception $e){
+			\OC_Log::write('chooser','EXIF parsing error: '.$e->getMessage(), \OC_Log::ERROR);
+		}
+		
+	}
+	
+	public $testKeyvalues = [
+		'ExposureTime'=>'1/500',
+		'FNumber'=>'28/5',
+		'ExposureProgram'=>1,
+		'ISOSpeedRatings'=>8000,
+		'ExifVersion'=>'0230',
+		'DateTimeOriginal'=>'2012:06:30 16:15:15',
+		'DateTimeDigitized'=>'2012:06:30 16:15:15',
+		'ComponentsConfiguration'=>'',
+		'ShutterSpeedValue'=>'9/1',
+		'ApertureValue'=>'5/1',
+		'ExposureBiasValue'=>'0/1',
+		'MaxApertureValue'=>'6149/1087',
+		'MeteringMode'=>5,
+		'Flash'=>16,
+		'FocalLength'=>'280/1',
+		'SubSecTime'=>'00',
+		'SubSecTimeOriginal'=>'00',
+		'SubSecTimeDigitized'=>'00',
+		'FlashPixVersion'=>'0100',
+		'ColorSpace'=>1,
+		'ExifImageWidth'=>1600,
+		'ExifImageLength'=>1067,
+		'FocalPlaneXResolution'=>'382423/97',
+		'FocalPlaneYResolution'=>'134321/34',
+		'FocalPlaneResolutionUnit'=>2,
+		'CustomRendered'=>0,
+		'ExposureMode'=>1,
+		'WhiteBalance'=>0,
+		'SceneCaptureType'=>0
+	];
+	
+	public function serialize(\Sabre\DAV\Server $server, \DOMElement $node) {
+		$prefix = $server->xmlNamespaces['NS_NEXTCLOUD:'];
+		$photos_exif = $node->ownerDocument->createElement($prefix . ':metadata-photos-exif');
+		foreach($this->keyvalues as $key=>$value){
+			$el = $node->ownerDocument->createElement($key);
+			$el->nodeValue = $value;
+			$photos_exif->appendChild($el);
+			$node->appendChild($el);
+		}
+		
+	}
+	
+}
+

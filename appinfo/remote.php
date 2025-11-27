@@ -125,7 +125,8 @@ if((rawurldecode($_SERVER['REQUEST_URI'])==OC::$WEBROOT."/remote.php/dav/files/"
 	$baseuri = OC::$WEBROOT."/remote.php/dav/files/".$user;
 	$objectTree->favorites = true;
 }
-elseif($_SERVER['REQUEST_URI']==OC::$WEBROOT."/remote.php/dav" /*&&
+elseif(($_SERVER['REQUEST_URI']==OC::$WEBROOT."/remote.php/dav" ||
+		$_SERVER['REQUEST_URI']==OC::$WEBROOT."/remote.php/dav/" )/*&&
 		strtolower($_SERVER['REQUEST_METHOD'])=='head'*/){
 	$baseuri = OC::$WEBROOT."/remote.php/dav";
 }
@@ -275,6 +276,8 @@ $server->addPlugin($lockPlugin);
 $server->addPlugin(new \Sabre\DAV\Browser\Plugin(false)); // Show something in the Browser, but no upload
 
 $server->xmlNamespaces[\OC_Connector_Sabre_Server_chooser::NS_NEXTCLOUD] = 'nc';
+$server->xmlNamespaces[\OC_Connector_Sabre_Server_chooser::NS_OCS] = 'x1';
+$server->xmlNamespaces[\OC_Connector_Sabre_Server_chooser::NS_OCM] = 'x2';
 $server->addPlugin(new OC_Connector_Sabre_FilesPlugin());
 //$server->addPlugin(new OC_Connector_Sabre_AbortedUploadDetectionPlugin());
 
