@@ -232,7 +232,7 @@ class OC_Connector_Sabre_Server_chooser extends Sabre\DAV\Server {
 		}
 		
 		$this->httpResponse->sendStatus(207);
-		$this->httpResponse->setHeader('Content-Type','application/xml; charset="utf-8"');
+		$this->httpResponse->setHeader('Content-Type','application/xml; charset=utf-8');
 		
 		$this->httpResponse->sendBody(
 				$this->generateMultiStatus(array($result))
@@ -419,7 +419,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 
 		// This is a multi-status response
 		$this->httpResponse->sendStatus(207);
-		$this->httpResponse->setHeader('Content-Type','application/xml; charset="utf-8"');
+		$this->httpResponse->setHeader('Content-Type','application/xml; charset=utf-8');
 		$this->httpResponse->setHeader('Vary','Brief,Prefer');
 		$this->httpResponse->setHeader('Status','207');
 		
