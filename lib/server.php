@@ -459,8 +459,8 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 					$user.'/', $data);
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/dav/', '<d:href>'.OC::$WEBROOT.'/remote.php/dav/files/'.
 					$user.'/', $data);//$data = preg_replace('|<oc:permissions>[^/]*</oc:permissions>|', '<oc:permissions>RGDNVW</oc:permissions>', $data);
-			$data = preg_replace('|<d:getcontenttype>image/jpg</d:getcontenttype>|', '<d:getcontenttype>image/jpeg</d:getcontenttype>', $data);
 		}
+		$data = preg_replace('|<d:getcontenttype>image/jpg</d:getcontenttype>|', '<d:getcontenttype>image/jpeg</d:getcontenttype>', $data);
 		if(!empty($this->tree->usage) && $this->tree->usage){
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/usage',
 					'<d:href>'.OC::$WEBROOT.'/remote.php/usage/remote.php/webdav', $data);
@@ -570,6 +570,43 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		return \OCA\FilesSharding\Lib::inDataFolder($path);
 	}
 
+	private function getItemsSharedStatuses($user_id, $itemType /*folder or file*/){
+		$return = [];
+		if(!\OCP\App::isEnabled('files_sharding') || \OCA\FilesSharding\Lib::isMaster()){
+			/*$return = \OCP\Share::getItemsShared($itemType, OCP\Share::FORMAT_STATUSES);
+			$master_to_slave_id_map = \OCP\Share::getItemsShared($itemType);
+			// Set item_source - apparently OCP\Share::FORMAT_STATUSES causes this not to be set
+			foreach($return as $item=>$data){
+				foreach($master_to_slave_id_map as $item1=>$data1){
+					if($master_to_slave_id_map[$item1]['file_source'] == $item){
+						$return[$item]['item_source'] = $master_to_slave_id_map[$item1]['item_source'];
+						break;
+					}
+				}
+				// For public shares, check if they're restricted
+				if($return[$item]['link'] && \OCP\App::isEnabled('uploader')){
+					$restricted = \OCA\Uploader\Util::checkRestrictedShare($return[$item]['item_source']);
+					if($restricted){
+						$return[$item]['restricted'] = true;
+					}
+				}
+			}*/
+			$return = \OCP\Share::getItemsShared($itemType, OCP\Share::FORMAT_NONE);
+		}
+		else{
+			try{
+				$arr = \OCA\FilesSharding\Lib::ws('share_fetch', array('fetch'=>'getItemsSharedStatusesRaw', 'user_id'=>$user_id, 'itemType'=>$itemType));
+				$return = $arr['data'];
+			}
+			catch(\Exception $e){
+				OC_Log::write('chooser','NO shares: '.$e->getMessage(), OC_Log::ERROR);
+			}
+		}
+		OC_Log::write('chooser','Returning shares: '.serialize($return), OC_Log::INFO);
+		return $return;
+	}
+
+
 	public function getPropertiesForPath($path, $propertyNames = array(), $depth = 0) {
 		
 		//	if ($depth!=0) $depth = 1;
@@ -639,7 +676,14 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		$user = \OCP\USER::getUser();
 		$ownerdisplayname = \OC_User::getDisplayName($user);
 		
+		$shares = [];
+		if(in_array('{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}share-types', $propertyNames)){
+			$shares = $this->getItemsSharedStatuses($user, 'folder');
+		}
+		
 		foreach($nodes as $myPath=>$node) {
+
+			$fileid = \OCA\FilesSharding\Lib::getFileId($myPath);
 
 			$currentPropertyNames = $propertyNames;
 
@@ -797,6 +841,18 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 						else{
 						}
 						break;
+					case '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}share-types':
+						OC_Log::write('chooser','Matching: '.$fileid.'-->'.get_class($node).'-->'.$newProperties[200][$prop], OC_Log::INFO);
+						$share_types = [];
+						foreach($shares as $shareid=>$share){
+							if($share['item_source']==$fileid){
+								OC_Log::write('chooser','Matched: '.$share['item_source'].'-->'.$shareid.'-->'.$fileid.'-->'.get_class($node).
+										'-->'.$newProperties[200][$prop], OC_Log::INFO);
+								$share_types[] = $share['share_type'];
+							}
+						}
+						$newProperties[200][$prop] = new ShareTypes($share_types);
+						break;
 					case '{' . self::NS_NEXTCLOUD . '}creation_time':
 						if ($node->getLastModified()){
 							$newProperties[200][$prop] = $node->getLastModified();
@@ -851,7 +907,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 
 			if($this->mediaSearch || $node instanceof \Sabre\DAV\IFile && substr($node->getContentType(), 0, 6)=="image/"){
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
-				$newProperties[200][$manualProp] = \OCA\FilesSharding\Lib::getFileId($myPath);
+				$newProperties[200][$manualProp] = $fileid;
 				unset($newProperties[404][$manualProp]);
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}size';
 				$newProperties[200][$manualProp] = $node instanceof \Sabre\DAV\IFile ? $node->getSize() : 0;
@@ -880,9 +936,9 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}comments-unread';
 				$newProperties[200][$manualProp] = 0;
 				unset($newProperties[404][$manualProp]);
-				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}share-types';
-				$newProperties[200][$manualProp] = '';
-				unset($newProperties[404][$manualProp]);
+				//$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}share-types';
+				//$newProperties[200][$manualProp] = '';
+				//unset($newProperties[404][$manualProp]);
 				$manualProp = '{' . self::NS_NEXTCLOUD . '}mount-type';
 				$newProperties[200][$manualProp] = '';
 				unset($newProperties[404][$manualProp]);
@@ -913,14 +969,16 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}owner-display-name';
 				$newProperties[200][$manualProp] = $ownerdisplayname;
 				unset($newProperties[404][$manualProp]);
-				//$manualProp = '{' . self::NS_OCS . '}share-permissions';
-				//$newProperties[200][$manualProp] = 19;
-				//unset($newProperties[404][$manualProp]);
-				//$manualProp = '{' . self::NS_OCM . '}share-permissions';
+				$manualProp = '{' . self::NS_OCS . '}share-permissions';
+				$newProperties[200][$manualProp] = 19;
+				unset($newProperties[404][$manualProp]);
+				$manualProp = '{' . self::NS_OCM . '}share-permissions';
 				//$newProperties[200][$manualProp] = '["share","read","write"]';
-				//unset($newProperties[404][$manualProp]);
+				$newProperties[200][$manualProp] = '["read"]';
+				unset($newProperties[404][$manualProp]);
 				//manualProp = '{' . self::NS_NEXTCLOUD . '}has-preview';
 				//$newProperties[200][manualProp] = '0';
+				//unset($newProperties[404][$manualProp]);
 				if(!empty($this->where)){
 					$whereExp = $this->where;
 					foreach(array_keys($newProperties[200]) as $prop){
@@ -943,8 +1001,8 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 					}
 					catch(Exception $e){
 					}
-					\OC_Log::write('chooser','Expect: '.$_SERVER['HTTP_EXPECT'], \OC_Log::WARN);
-					\OC_Log::write('chooser','Where expression eval res: '.$whereExp.'-->'.\OCA\FilesSharding\Lib::getFileId($myPath).'-->'.$myPath.'-->'.$res, OC_Log::WARN);
+					\OC_Log::write('chooser','Expect: '.$_SERVER['HTTP_EXPECT'], \OC_Log::INFO);
+					\OC_Log::write('chooser','Where expression eval res: '.$whereExp.'-->'.$fileid.'-->'.$myPath.'-->'.$res, OC_Log::DEBUG);
 					if(empty($res)){
 						continue;
 					}
@@ -1004,7 +1062,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 				else{
 						// this is the standard case
 						$manualProp = '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}fileid';
-						$newProperties[200][$manualProp] = \OCA\FilesSharding\Lib::getFileId($myPath);
+						$newProperties[200][$manualProp] = $fileid;
 						unset($newProperties[404][$manualProp]);
 				}
 			}
@@ -1039,6 +1097,27 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			}
 		}
 		return true;
+	}
+	
+}
+
+class ShareTypes extends \Sabre\DAV\Property {
+	
+	public $types;
+	
+	public function __construct($types_arr) {
+		$this->types_arr = $types_arr;
+	}
+	
+	public function serialize(\Sabre\DAV\Server $server, \DOMElement $node) {
+		$prefix = $server->xmlNamespaces['NS_OWNCLOUD:'];
+		$share_types = $node->ownerDocument->createElement($prefix . ':share-types');
+		foreach($this->types_arr as $type){
+			$share_type = $node->ownerDocument->createElement('oc' . ':share-type');// For some reason $prefix is empty here
+			$share_type->nodeValue = $type;
+			$share_types->appendChild($share_type);
+			$node->appendChild($share_type);
+		}
 	}
 	
 }
