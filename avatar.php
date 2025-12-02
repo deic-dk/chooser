@@ -1,8 +1,28 @@
 <?php 
 
-\OC_Log::write('saml', 'Returning image for '.$_REQUEST['user'], \OC_Log::WARN);
+\OC_Log::write('chooser', 'Returning image for '.$_REQUEST['user'], \OC_Log::WARN);
+
+// Uncomment to use real avatars on blog instead of letters
+/*if((empty($_REQUEST['use_letter']) || $_REQUEST['use_letter']=='no' || $_REQUEST['use_letter']=='false') &&
+		!empty($_REQUEST['user']) && \OC_User::userExists($_REQUEST['user'])){
+	$user = $_REQUEST['user'];
+	$masterUrl = OCA\FilesSharding\Lib::getMasterURL();
+	$serverUrl = OCA\FilesSharding\Lib::getServerForUser($user);
+	if(!OCA\FilesSharding\Lib::onServerForUser($user)){
+		if(!empty($_SERVER['HTTP_DESTINATION'])){
+			$destination = preg_replace('|^'.$masterUrl.'|', $serverUrl, $_SERVER['HTTP_DESTINATION']);
+			header("Destination: " . $destination);
+		}
+		header("HTTP/1.1 301 Moved Permanently");
+		header("Location: " . $serverUrl . $_SERVER['REQUEST_URI']);
+		header("User: " . $user);
+		exit;
+	}
+}*/
 
 getAvatar($_REQUEST['user'], $_REQUEST['size']);
+
+exit;
 
 function getAvatar($user, $size) {
 	//\OC_JSON::checkLoggedIn();
