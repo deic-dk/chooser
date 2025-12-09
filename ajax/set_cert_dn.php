@@ -20,8 +20,11 @@ if($dn===""){
 	}
 }
 
-if(OC_Chooser::addCert($user_id, $dn)){
+if(OC_Chooser::addCert($user_id, $dn)==OC_Chooser::$CERT_ADDED){
 	$ret['message'] = "Added DN ".$dn;
+}
+elseif(OC_Chooser::addCert($user_id, $dn)==OC_Chooser::$CERT_PRESENT){
+	$ret['error'] = $dn." OK";
 }
 else{
 	$ret['error'] = "Failed setting DN ".$dn." for user ".$user_id;

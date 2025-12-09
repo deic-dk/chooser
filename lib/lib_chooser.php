@@ -15,6 +15,9 @@ class OC_Chooser {
 	private static $dnHeaderHostDNs = [];
 	
 	public static $MAX_CERTS = 10;
+	public static $CERT_ERROR = 0;
+	public static $CERT_ADDED = 1;
+	public static $CERT_PRESENT = 2;
 	public static $MOVING_CACHE_PREFIX = 'moving_';
 	
 	private static function loadNetValues(){
@@ -310,7 +313,7 @@ END;
 	private static function getCertIndex($user) {
 		$index = 0;
 		while($index<self::$MAX_CERTS){
-			$subject = \OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
+			$subject = \OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index, '');
 			if(empty($subject)){
 				return $index;
 			}
@@ -320,7 +323,7 @@ END;
 	}
 
 	public static function getCertSubject($user, $index=0){
-		return \OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index);
+		return \OCP\Config::getUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index, '');
 	}
 
 	public static function getActiveDNs($user){
@@ -335,16 +338,19 @@ END;
 	public static function addCert($user, $subject) {
 		$index = self::getCertIndex($user);
 		if($index<0){
-			return false;
+			OC_Log::write('chooser', 'Only '.self::$MAX_CERTS.' certificates allowed.', OC_Log::WARN);
+			return self::$CERT_ERROR;
 		}
 		$subject = trim($subject);
 		$dns = self::getActiveDNs($user);
 		foreach($dns as $dn){
 			if($dn==$subject){
-				return false;
+				OC_Log::write('chooser', 'DN '.$subject.' already present.', OC_Log::WARN);
+				return self::$CERT_PRESENT;
 			}
 		}
-		return \OCP\Config::setUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index, $subject);
+		return \OCP\Config::setUserValue($user, 'chooser', 'ssl_certificate_subject_'.$index, $subject)?
+			self::$CERT_ADDED:self::$CERT_ERROR;
 	}
 
 	public static function removeCert($user, $subject="") {
