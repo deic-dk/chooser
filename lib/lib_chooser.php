@@ -107,7 +107,7 @@ class OC_Chooser {
 			$user_id = '';
 			$list_array = [];
 			if(!empty(self::$vlanlisturl) && ($list_array = apc_fetch(self::$IPS_CACHE_KEY)) === false){
-				$list_line = file_get_contents(self::$vlanlisturl.'?password='.self::$vlanlistpassword);
+				$list_line = file_get_contents(self::$vlanlisturl.'?fields=no&password='.self::$vlanlistpassword);
 				$list_array = explode("\n", $list_line);
 				apc_add(self::$IPS_CACHE_KEY, $list_array, self::$IPS_TTL_SECONDS);
 				OC_Log::write('chooser', 'Refreshed IP cache: '.$list_array[0], OC_Log::WARN);
