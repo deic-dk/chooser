@@ -42,6 +42,10 @@ $l = OC_L10N::get('chooser');
 	</div>
 	<br />
 
+	<?php $masterUrl = \OCA\FilesSharding\Lib::getMasterURL();?>
+	<label><a href="<?php echo($masterUrl);?>/my_ca_cert.pem">ScienceData CA cert</a></label>
+	<br />
+
 	<?php p($l->t('Allow authentication with external X.509 certificate:').' '); ?>
 	<input type="text" id="ssl_cert_dn"
 		value=""
