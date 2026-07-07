@@ -770,6 +770,14 @@ END;
 		}
 	}
 	
+	/**
+	 * Check if a given, authenticated DN is allowed to impersonate other DNs, i.e. deliver and fetch
+	 * files on behalf of these other users. The idea is to use server certificates also as client
+	 * certificates. These certificates must explicitly allow “TLS Client Authentication” Extended Key Usage .
+	 * Notice that Letencrypt certificates no longer support this.
+	 * @param unknown $hostDn
+	 * @return string
+	 */
 	public static function checkCertRelay($hostDn){
 		if(empty($hostDn)){
 			return "";
