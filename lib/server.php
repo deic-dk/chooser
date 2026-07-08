@@ -388,7 +388,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 		// $xml = new \Sabre\DAV\XMLReader(file_get_contents('php://input'));
 		$xml = $this->httpRequest->getBody(true);
 		if(!empty($xml)){
-			OC_Log::write('chooser','PROPFIND XML: '.$_SERVER['REQUEST_METHOD'].' --> '.$xml, OC_Log::INFO);
+			OC_Log::write('chooser','PROPFIND XML: '.$_SERVER['REQUEST_METHOD'].' --> '.$xml.' --> '.serialize(getallheaders()), OC_Log::INFO);
 		}
 		$requestedProperties = $this->parsePropFindRequest($xml);
 
@@ -469,7 +469,7 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 			$data = str_replace('<d:href>'.OC::$WEBROOT.'/remote.php/groupfolders',
 					'<d:href>'.OC::$WEBROOT.'/remote.php/groupfolders/remote.php/webdav', $data);
 		}
-		OC_Log::write('chooser','SENDING DATA: '.$_SERVER['HTTP_USER_AGENT'].':'.$user.':'.$uri.'-->'.$data, OC_Log::INFO);
+		OC_Log::write('chooser','SENDING DATA: '.$_SERVER['HTTP_USER_AGENT'].':'.\OCP\USER::getUser().':'.$uri.'-->'.$data, OC_Log::INFO);
 		$this->httpResponse->sendBody($data);
 
 	}
@@ -842,12 +842,11 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 						}
 						break;
 					case '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}share-types':
-						OC_Log::write('chooser','Matching: '.$fileid.'-->'.get_class($node).'-->'.$newProperties[200][$prop], OC_Log::INFO);
+						OC_Log::write('chooser','Matching: '.$fileid.'-->'.get_class($node).'-->'.$prop, OC_Log::INFO);
 						$share_types = [];
 						foreach($shares as $shareid=>$share){
 							if($share['item_source']==$fileid){
-								OC_Log::write('chooser','Matched: '.$share['item_source'].'-->'.$shareid.'-->'.$fileid.'-->'.get_class($node).
-										'-->'.$newProperties[200][$prop], OC_Log::INFO);
+								OC_Log::write('chooser','Matched: '.$share['item_source'].'-->'.$shareid.'-->'.$fileid.'-->'.get_class($node).'-->'.$share['share_type'], OC_Log::INFO);
 								$share_types[] = $share['share_type'];
 							}
 						}
@@ -857,6 +856,15 @@ curl -u test2:some_password --data-binary '<?xml version="1.0"?><oc:filter-files
 						if ($node->getLastModified()){
 							$newProperties[200][$prop] = $node->getLastModified();
 						}
+						break;
+					case '{' . self::NS_NEXTCLOUD . '}share-attributes':
+						$newProperties[200][$prop] = '[]';
+						break;
+					case '{' . self::NS_NEXTCLOUD . '}is-mount-root':
+						$newProperties[200][$prop] = 'false';
+						break;
+					case '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}data-fingerprint':
+						$newProperties[200][$prop] = '';
 						break;
 						//case '{' . \OC_Connector_Sabre_FilesPlugin::NS_OWNCLOUD . '}favorite' :
 						//OC_Log::write('chooser','FAVORITE REQUEST --> '.$myPath, OC_Log::WARN);
@@ -1110,10 +1118,16 @@ class ShareTypes extends \Sabre\DAV\Property {
 	}
 	
 	public function serialize(\Sabre\DAV\Server $server, \DOMElement $node) {
-		$prefix = $server->xmlNamespaces['NS_OWNCLOUD:'];
+		if(!empty($server->xmlNamespaces['NS_OWNCLOUD'])){
+			$prefix = $server->xmlNamespaces['NS_OWNCLOUD'];
+		}
+		else{
+			// For some reason $prefix is empty
+			$prefix = 'oc';
+		}
 		$share_types = $node->ownerDocument->createElement($prefix . ':share-types');
 		foreach($this->types_arr as $type){
-			$share_type = $node->ownerDocument->createElement('oc' . ':share-type');// For some reason $prefix is empty here
+			$share_type = $node->ownerDocument->createElement($prefix . ':share-type');
 			$share_type->nodeValue = $type;
 			$share_types->appendChild($share_type);
 			$node->appendChild($share_type);
