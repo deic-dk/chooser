@@ -26,14 +26,15 @@ if(!$ok){
 OCP\JSON::checkLoggedIn();
 $user = \OCP\USER::getUser();
 
-$vlantrusteduser = trim(\OCP\Config::getSystemValue('vlantrusteduser', ''));
-$vlantrusteduser1 = OC_Appconfig::getValue('user_pods', 'trustedUser');
+//$vlantrusteduser = trim(\OCP\Config::getSystemValue('vlantrusteduser', ''));
+//$vlantrusteduser1 = OC_Appconfig::getValue('user_pods', 'trustedUser');
 
 // Never hand out keys of trusted users
-if(empty($user) || $user==$vlantrusteduser || $user==$vlantrusteduser1){
+// - well, the only ones who can get cloud's key are cloud's pods - the ones that actually may need it.
+/*if(empty($user) || $user==$vlantrusteduser || $user==$vlantrusteduser1){
 	OCP\JSON::error(array('message'=>'Failed obtaining private key of user '.$user));
 	exit;
-}
+}*/
 
 require_once('apps/chooser/appinfo/apache_note_user.php');
 
