@@ -21,8 +21,9 @@ class Share_ObjectTree extends \OC\Connector\Sabre\ObjectTree {
 	
 	public function fixPath(&$path){
 		if($this->auth_token!=null && $this->auth_path!=null){
-			OC_Log::write('chooser','path, auth_token: auth_path: '.$path.", ".$this->auth_token.":".$this->auth_path, OC_Log::INFO);
-			$path = preg_replace("/^".$this->auth_token."/", $this->auth_path, $path);
+			OC_Log::write('chooser','path, auth_token: auth_path: '.$path.", ".$this->auth_token."/:".$this->auth_path."/", OC_Log::INFO);
+			$path = preg_replace("/^".$this->auth_token."\//", $this->auth_path."/", $path, 1);
+			OC_Log::write('chooser','path: '.$path, OC_Log::INFO);
 		}
 	}
 	
